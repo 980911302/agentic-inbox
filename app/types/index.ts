@@ -2,6 +2,56 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
+export type UserRole = "admin" | "user";
+
+export interface AuthUser {
+	email: string;
+	displayName: string;
+	role: UserRole;
+	disabled?: boolean;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface AuthStatus {
+	initialized: boolean;
+	adminEmail: string;
+	allowRegistration: boolean;
+	domains: string[];
+}
+
+export interface ApiKeyInfo {
+	id: string;
+	name: string;
+	keyPrefix: string;
+	lastUsedAt: string | null;
+	createdAt: string;
+}
+
+export interface CreatedApiKey {
+	id: string;
+	name: string;
+	keyPrefix: string;
+	key: string;
+	createdAt: string;
+}
+
+export interface AdminUserItem extends AuthUser {
+	disabled: boolean;
+	createdAt: string;
+	updatedAt: string;
+	keyCount: number;
+}
+
+export interface AdminUsersResponse {
+	users: AdminUserItem[];
+	orphanMailboxes: string[];
+}
+
+export interface AdminSettings {
+	allowRegistration: boolean;
+}
+
 export interface SignatureSettings {
 	enabled: boolean;
 	text: string;
@@ -13,7 +63,6 @@ export interface MailboxSettings {
 	forwarding?: { enabled: boolean; email: string };
 	signature?: SignatureSettings;
 	autoReply?: { enabled: boolean; subject: string; message: string };
-	agentSystemPrompt?: string;
 }
 
 export interface Mailbox {
@@ -42,7 +91,7 @@ export interface Email {
 	raw_headers?: string | null;
 	attachments?: Attachment[];
 	snippet?: string | null;
-	// Thread aggregate fields (only present in threaded list view)
+	// 会话列表聚合字段
 	thread_count?: number;
 	thread_unread_count?: number;
 	participants?: string;

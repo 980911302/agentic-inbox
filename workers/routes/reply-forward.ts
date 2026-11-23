@@ -22,7 +22,7 @@ type AppContext = Context<MailboxContext>;
 type RateLimitStub = { checkSendRateLimit: () => Promise<string | null> };
 
 export async function handleReplyEmail(c: AppContext) {
-	const mailboxId = c.req.param("mailboxId") ?? "";
+	const mailboxId = decodeURIComponent(c.req.param("mailboxId") ?? "").toLowerCase();
 	const id = c.req.param("id") ?? "";
 	const body = SendEmailRequestSchema.parse(await c.req.json());
 	const { to, cc, bcc, from, subject, html, text, attachments } = body;
@@ -31,7 +31,7 @@ export async function handleReplyEmail(c: AppContext) {
 	const rawOriginal = (await stub.getEmail(id)) as EmailFull | null;
 
 	if (!rawOriginal) {
-		return c.json({ error: "Original email not found" }, 404);
+		return c.json({ error: "原邮件不存在" }, 404);
 	}
 
 	const originalEmail = await resolveOriginalEmail(stub, rawOriginal);
@@ -113,7 +113,7 @@ export async function handleReplyEmail(c: AppContext) {
 }
 
 export async function handleForwardEmail(c: AppContext) {
-	const mailboxId = c.req.param("mailboxId") ?? "";
+	const mailboxId = decodeURIComponent(c.req.param("mailboxId") ?? "").toLowerCase();
 	const id = c.req.param("id") ?? "";
 	const body = SendEmailRequestSchema.parse(await c.req.json());
 	const { to, cc, bcc, from, subject, html, text, attachments } = body;
@@ -122,7 +122,7 @@ export async function handleForwardEmail(c: AppContext) {
 	const rawOriginal = (await stub.getEmail(id)) as EmailFull | null;
 
 	if (!rawOriginal) {
-		return c.json({ error: "Original email not found" }, 404);
+		return c.json({ error: "原邮件不存在" }, 404);
 	}
 
 	await resolveOriginalEmail(stub, rawOriginal);

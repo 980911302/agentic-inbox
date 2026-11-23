@@ -168,7 +168,7 @@ export function buildQuotedReplyBlock(
 	// execute. Convert to escaped plain text instead.
 	const bodyToQuote = escapeHtml(stripHtml(body)).replace(/\n/g, "<br>");
 
-	return `<br><blockquote style="border-left: 2px solid #ccc; margin: 0; padding-left: 1em; color: #666;">On ${formattedDate}, ${escapedSender} wrote:<br><br>${bodyToQuote}</blockquote>`;
+	return `<br><blockquote style="border-left: 2px solid #ccc; margin: 0; padding-left: 1em; color: #666;">在 ${formattedDate}，${escapedSender} 写道：<br><br>${bodyToQuote}</blockquote>`;
 }
 
 /**
@@ -185,7 +185,7 @@ export function rewriteInlineImages(
 	let result = body;
 	for (const att of attachments) {
 		if (att.disposition === "inline" && att.content_id) {
-			const url = `/api/v1/mailboxes/${mailboxId}/emails/${emailId}/attachments/${att.id}`;
+			const url = `/api/v1/mailboxes/${encodeURIComponent(mailboxId)}/emails/${encodeURIComponent(emailId)}/attachments/${encodeURIComponent(att.id)}`;
 			// Strip angle brackets from content_id if present
 			const cid = att.content_id.startsWith("<")
 				? att.content_id.slice(1, -1)
@@ -205,7 +205,7 @@ export function getAttachmentUrl(
 	emailId: string,
 	attachmentId: string,
 ): string {
-	return `/api/v1/mailboxes/${mailboxId}/emails/${emailId}/attachments/${attachmentId}`;
+	return `/api/v1/mailboxes/${encodeURIComponent(mailboxId)}/emails/${encodeURIComponent(emailId)}/attachments/${encodeURIComponent(attachmentId)}`;
 }
 
 export function downloadFile(url: string, filename: string) {

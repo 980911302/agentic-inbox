@@ -3,35 +3,26 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 /**
- * Shared tool business logic for the Agent and MCP server.
- *
- * Each function takes an `env: Env` (or a DO stub) and tool-specific params,
- * performs the business logic (DO calls, data fetching, formatting), and
- * returns a plain object. The Agent and MCP server wrap these results in
- * their own response formats.
- *
- * Functions that already exist in email-helpers.ts (getFullEmail, getFullThread)
- * are reused directly — this module covers the remaining shared operations.
+ * MCP 邮件工具的核心业务逻辑
+ * 所有工具函数均由服务端注入已鉴权的唯一 mailboxId，防止越权访问其他邮箱
  */
 
-import type { EmailFull } from "./schemas";
+import { Folders } from "../../shared/folders";
+import { sendEmail } from "../email-sender";
+import type { Env } from "../types";
 import {
-	getMailboxStub,
-	getFullEmail,
-	getFullThread,
 	buildQuotedReplyBlock,
-	textToHtml,
-	listMailboxes,
-	generateMessageId,
 	buildReferencesChain,
 	buildThreadingHeaders,
+	generateMessageId,
+	getFullEmail,
+	getFullThread,
+	getMailboxStub,
+	textToHtml,
 } from "./email-helpers";
-import { verifyDraft } from "./ai";
-import { sendEmail } from "../email-sender";
-import { Folders } from "../../shared/folders";
-import type { Env } from "../types";
+import type { EmailFull } from "./schemas";
 
-// ── Type casts for DO methods not on the base stub type ────────────
+// Base DO stub 类型未包含的方法补充声明
 type MailboxSearchStub = {
 	searchEmails: (options: {
 		query: string;
@@ -43,10 +34,28 @@ type RateLimitStub = {
 	checkSendRateLimit: () => Promise<string | null>;
 };
 
-// ── list_mailboxes ─────────────────────────────────────────────────
+// ── get_mailbox_info ───────────────────────────────────────────────
 
-export async function toolListMailboxes(env: Env) {
-	return listMailboxes(env.BUCKET);
+export async function toolGetMailboxInfo(env: Env, mailboxId: string) {
+	const stub = getMailboxStub(env, mailboxId);
+	const folders = await stub.getFolders();
+	let settings: Record<string, unknown> = {};
+	const obj = await env.BUCKET.get(`mailboxes/${mailboxId}.json`);
+	if (obj) {
+		try {
+			settings = (await obj.json()) as Record<string, unknown>;
+		} catch {
+			// 忽略异常配置
+		}
+	}
+	return {
+		email: mailboxId,
+		fromName:
+			typeof settings.fromName === "string" && settings.fromName
+				? settings.fromName
+				: mailboxId.split("@")[0],
+		folders,
+	};
 }
 
 // ── list_emails ────────────────────────────────────────────────────
@@ -75,7 +84,7 @@ export async function toolGetEmail(
 ) {
 	const stub = getMailboxStub(env, mailboxId);
 	const email = await getFullEmail(stub, emailId);
-	if (!email) return { error: "Email not found" };
+	if (!email) return { error: "邮件不存在" };
 	return email;
 }
 
@@ -106,16 +115,6 @@ export async function toolSearchEmails(
 
 // ── draft_reply ────────────────────────────────────────────────────
 
-/**
- * Shared draft-reply logic.
- *
- * @param bodyInput - The reply body text. Can be plain text or HTML.
- * @param options.isPlainText - If true, body is treated as plain text and
- *   converted to HTML. If false, body is treated as HTML.
- * @param options.runVerifyDraft - If true, runs AI verifyDraft on the body.
- *   The agent and MCP both do this, but the agent does it on plain text
- *   while MCP does it on HTML.
- */
 export async function toolDraftReply(
 	env: Env,
 	mailboxId: string,
@@ -125,7 +124,6 @@ export async function toolDraftReply(
 		subject: string;
 		body: string;
 		isPlainText?: boolean;
-		runVerifyDraft?: boolean;
 	},
 ): Promise<
 	| { status: "draft_saved"; draftId: string; message: string; draft: Record<string, string> }
@@ -133,28 +131,15 @@ export async function toolDraftReply(
 > {
 	const stub = getMailboxStub(env, mailboxId);
 
-	// Verify/sanitize if requested
 	let processedBody = params.body.trim();
-	if (params.runVerifyDraft) {
-		const sanitized = await verifyDraft(env.AI, processedBody);
-		if (!sanitized) {
-			return { error: "Draft verification failed — body could not be verified. Please try again." };
-		}
-		processedBody = sanitized;
-	}
-
-	// Convert plain text to HTML if needed
 	if (params.isPlainText) {
 		processedBody = textToHtml(processedBody);
 	}
 
 	const draftId = crypto.randomUUID();
-
-	// Get the original email for thread_id and quoted text
 	const original = (await stub.getEmail(params.originalEmailId)) as EmailFull | null;
 	const threadId = original?.thread_id || params.originalEmailId;
 
-	// Append quoted original message
 	const quotedBlock = original
 		? buildQuotedReplyBlock({
 				date: original.date,
@@ -183,7 +168,7 @@ export async function toolDraftReply(
 	return {
 		status: "draft_saved",
 		draftId,
-		message: "Draft saved to Drafts folder. Review it and confirm to send.",
+		message: "回复草稿已保存到草稿箱。",
 		draft: {
 			originalEmailId: params.originalEmailId,
 			to: params.to,
@@ -193,7 +178,7 @@ export async function toolDraftReply(
 	};
 }
 
-// ── draft_email (new email, not a reply) ───────────────────────────
+// ── draft_email (新建草稿) ─────────────────────────────────────────
 
 export async function toolDraftEmail(
 	env: Env,
@@ -203,10 +188,7 @@ export async function toolDraftEmail(
 		subject: string;
 		body: string;
 		isPlainText?: boolean;
-		runVerifyDraft?: boolean;
-		/** Optional in_reply_to for create_draft style */
 		in_reply_to?: string;
-		/** Optional thread_id for create_draft style */
 		thread_id?: string;
 	},
 ): Promise<
@@ -216,21 +198,12 @@ export async function toolDraftEmail(
 	const stub = getMailboxStub(env, mailboxId);
 
 	let processedBody = params.body.trim();
-	if (params.runVerifyDraft) {
-		const sanitized = await verifyDraft(env.AI, processedBody);
-		if (!sanitized) {
-			return { error: "Draft verification failed — body could not be verified. Please try again." };
-		}
-		processedBody = sanitized;
-	}
-
 	if (params.isPlainText) {
 		processedBody = textToHtml(processedBody);
 	}
 
 	const draftId = crypto.randomUUID();
 
-	// Resolve thread ID
 	let resolvedThreadId = params.thread_id;
 	if (!resolvedThreadId && params.in_reply_to) {
 		const original = (await stub.getEmail(params.in_reply_to)) as EmailFull | null;
@@ -260,7 +233,7 @@ export async function toolDraftEmail(
 		status: "draft_saved",
 		draftId,
 		threadId: resolvedThreadId,
-		message: "Draft saved to Drafts folder. Review it and confirm to send.",
+		message: "草稿已保存到草稿箱。",
 		draft: {
 			to: params.to,
 			subject: params.subject,
@@ -288,17 +261,11 @@ export async function toolUpdateDraft(
 
 	const oldDraft = (await stub.getEmail(params.draftId)) as EmailFull | null;
 	if (!oldDraft) {
-		return { error: "Draft not found" };
+		return { error: "草稿不存在" };
 	}
 
-	// Verify the body BEFORE deleting the old draft to prevent data loss
 	const newDraftId = crypto.randomUUID();
-	const rawBody = params.bodyHtml ?? oldDraft.body ?? "";
-	const verifiedBody = await verifyDraft(env.AI, rawBody);
-
-	if (!verifiedBody) {
-		return { error: "Draft verification failed — keeping existing draft unchanged. Please try again." };
-	}
+	const nextBody = params.bodyHtml ?? oldDraft.body ?? "";
 
 	await stub.deleteEmail(params.draftId);
 	await stub.createEmail(
@@ -309,7 +276,7 @@ export async function toolUpdateDraft(
 			sender: mailboxId.toLowerCase(),
 			recipient: (params.to ?? oldDraft.recipient).toLowerCase(),
 			date: new Date().toISOString(),
-			body: verifiedBody,
+			body: nextBody,
 			in_reply_to: oldDraft.in_reply_to || null,
 			email_references: oldDraft.email_references || null,
 			thread_id: oldDraft.thread_id || newDraftId,
@@ -321,7 +288,7 @@ export async function toolUpdateDraft(
 		status: "draft_updated",
 		newDraftId,
 		oldDraftId: params.draftId,
-		message: "Draft updated in Drafts folder.",
+		message: "草稿已更新。",
 	};
 }
 
@@ -351,26 +318,7 @@ export async function toolMoveEmail(
 	if (success) {
 		return { status: "moved", emailId, folder: folderId };
 	}
-	return { error: "Failed to move email" };
-}
-
-// ── discard_draft ──────────────────────────────────────────────────
-
-export async function toolDiscardDraft(
-	env: Env,
-	mailboxId: string,
-	draftId: string,
-) {
-	const stub = getMailboxStub(env, mailboxId);
-	const email = (await stub.getEmail(draftId)) as { folder_id?: string } | null;
-	if (!email) {
-		return { error: "Draft not found" };
-	}
-	if (email.folder_id !== Folders.DRAFT) {
-		return { error: "Cannot discard: email is not a draft" };
-	}
-	await stub.deleteEmail(draftId);
-	return { status: "discarded", draftId };
+	return { error: "移动邮件失败，请检查目标文件夹是否存在" };
 }
 
 // ── delete_email ───────────────────────────────────────────────────
@@ -381,9 +329,18 @@ export async function toolDeleteEmail(
 	emailId: string,
 ) {
 	const stub = getMailboxStub(env, mailboxId);
-	const result = await stub.deleteEmail(emailId);
-	if (result === null) {
-		return { error: "Email not found", emailId };
+	const attachments = await stub.deleteEmail(emailId);
+	if (attachments === null) {
+		return { error: "邮件不存在", emailId };
+	}
+	// 同步清理 R2 中的附件文件
+	if (attachments.length > 0) {
+		await env.BUCKET.delete(
+			attachments.map(
+				(att: { id: string; filename: string }) =>
+					`attachments/${emailId}/${att.id}/${att.filename}`,
+			),
+		);
 	}
 	return { status: "deleted", emailId };
 }
@@ -405,7 +362,6 @@ export async function toolSendReply(
 > {
 	const stub = getMailboxStub(env, mailboxId);
 
-	// Check send rate limit
 	const rateLimitError = await (stub as unknown as RateLimitStub).checkSendRateLimit();
 	if (rateLimitError) {
 		return { error: rateLimitError };
@@ -413,25 +369,20 @@ export async function toolSendReply(
 
 	const originalEmail = (await stub.getEmail(params.originalEmailId)) as EmailFull | null;
 	if (!originalEmail) {
-		return { error: "Original email not found" };
+		return { error: "原邮件不存在" };
 	}
 
 	const { originalMsgId, references, threadId } = buildReferencesChain(originalEmail);
 	const fromDomain = mailboxId.split("@")[1];
-	if (!fromDomain) throw new Error("Invalid mailbox email address");
+	if (!fromDomain) throw new Error("无效的发件邮箱地址");
 	const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
 
-	// Verify and append quoted original message
-	const sanitizedBody = await verifyDraft(env.AI, params.bodyHtml);
-	if (!sanitizedBody) {
-		return { error: "Draft verification failed — refusing to send unverified content. Please try again." };
-	}
 	const quotedBlock = buildQuotedReplyBlock({
 		date: originalEmail.date,
 		sender: originalEmail.sender || params.to,
 		body: originalEmail.body ?? undefined,
 	});
-	const fullBodyHtml = sanitizedBody + quotedBlock;
+	const fullBodyHtml = params.bodyHtml + quotedBlock;
 
 	try {
 		await sendEmail(env.EMAIL, {
@@ -443,7 +394,7 @@ export async function toolSendReply(
 		});
 	} catch (e) {
 		console.error("Email send failed:", (e as Error).message);
-		return { error: `Failed to send reply: ${(e as Error).message}` };
+		return { error: `发送回复失败: ${(e as Error).message}` };
 	}
 
 	await stub.createEmail(
@@ -464,7 +415,7 @@ export async function toolSendReply(
 		[],
 	);
 
-	return { status: "sent", messageId, message: `Reply sent to ${params.to}` };
+	return { status: "sent", messageId, message: `回复已发送至 ${params.to}` };
 }
 
 // ── send_email ─────────────────────────────────────────────────────
@@ -483,31 +434,25 @@ export async function toolSendEmail(
 > {
 	const stub = getMailboxStub(env, mailboxId);
 
-	// Check send rate limit
 	const rateLimitError = await (stub as unknown as RateLimitStub).checkSendRateLimit();
 	if (rateLimitError) {
 		return { error: rateLimitError };
 	}
 
 	const fromDomain = mailboxId.split("@")[1];
-	if (!fromDomain) throw new Error("Invalid mailbox email address");
+	if (!fromDomain) throw new Error("无效的发件邮箱地址");
 	const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
-
-	const sanitizedBody = await verifyDraft(env.AI, params.bodyHtml);
-	if (!sanitizedBody) {
-		return { error: "Draft verification failed — refusing to send unverified content. Please try again." };
-	}
 
 	try {
 		await sendEmail(env.EMAIL, {
 			to: params.to,
 			from: mailboxId,
 			subject: params.subject,
-			html: sanitizedBody,
+			html: params.bodyHtml,
 		});
 	} catch (e) {
 		console.error("Email send failed:", (e as Error).message);
-		return { error: `Failed to send email: ${(e as Error).message}` };
+		return { error: `发送邮件失败: ${(e as Error).message}` };
 	}
 
 	await stub.createEmail(
@@ -518,7 +463,7 @@ export async function toolSendEmail(
 			sender: mailboxId.toLowerCase(),
 			recipient: params.to.toLowerCase(),
 			date: new Date().toISOString(),
-			body: sanitizedBody,
+			body: params.bodyHtml,
 			in_reply_to: null,
 			email_references: null,
 			thread_id: messageId,
@@ -527,5 +472,5 @@ export async function toolSendEmail(
 		[],
 	);
 
-	return { status: "sent", messageId, message: `Email sent to ${params.to}` };
+	return { status: "sent", messageId, message: `邮件已发送至 ${params.to}` };
 }

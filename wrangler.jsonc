@@ -9,10 +9,15 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"routes": [
+		{
+			"pattern": "mail.zll300.com",
+			"zone_name": "zll300.com",
+			"custom_domain": true
+		}
+	],
 	"vars": {
-		// Production deploys must also define POLICY_AUD and TEAM_DOMAIN.
-		// TEAM_DOMAIN may be the base Access URL or the full /cdn-cgi/access/certs URL.
-		// The worker now fails closed outside local development if Access is not configured.
+		// 主域名列表（多个域名以英文逗号分隔），第一个域名将用于管理员账户 admin@<域名>
 		"DOMAINS": "zll300.com",
 		"EMAIL_ADDRESSES": []
 	},
@@ -29,9 +34,6 @@
 			"preview_bucket_name": "agentic-inbox"
 		}
 	],
-	"ai": {
-		"binding": "AI"
-	},
 	"durable_objects": {
 		"bindings": [
 			{
@@ -39,12 +41,8 @@
 				"class_name": "MailboxDO"
 			},
 			{
-				"name": "EMAIL_AGENT",
-				"class_name": "EmailAgent"
-			},
-			{
-				"name": "EMAIL_MCP",
-				"class_name": "EmailMCP"
+				"name": "AUTH",
+				"class_name": "AuthDO"
 			}
 		]
 	},
@@ -64,6 +62,16 @@
 		{
 			"tag": "v3",
 			"new_sqlite_classes": [
+				"EmailMCP"
+			]
+		},
+		{
+			"tag": "v4",
+			"new_sqlite_classes": [
+				"AuthDO"
+			],
+			"deleted_classes": [
+				"EmailAgent",
 				"EmailMCP"
 			]
 		}

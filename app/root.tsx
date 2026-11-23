@@ -11,7 +11,11 @@ import {
 	TooltipProvider,
 } from "@cloudflare/kumo";
 import { WarningIcon } from "@phosphor-icons/react";
-import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+	MutationCache,
+	QueryClient,
+	QueryClientProvider,
+} from "@tanstack/react-query";
 import { forwardRef, useState } from "react";
 import {
 	isRouteErrorResponse,
@@ -32,8 +36,12 @@ function makeQueryClient() {
 				staleTime: 30_000,
 				refetchOnWindowFocus: false,
 				retry: (failureCount, error) => {
-					// Don't retry 4xx errors (not found, unauthorized, etc.)
-					if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+					// 4xx 错误不自动重试
+					if (
+						error instanceof ApiError &&
+						error.status >= 400 &&
+						error.status < 500
+					) {
 						return false;
 					}
 					return failureCount < 2;
@@ -42,23 +50,17 @@ function makeQueryClient() {
 		},
 		mutationCache: new MutationCache({
 			onError: (error) => {
-				// Global fallback for mutations that don't handle errors themselves.
-				// Consumers using mutateAsync + try/catch handle their own errors.
-				console.error("Mutation failed:", error);
+				console.error("请求执行失败:", error);
 			},
 		}),
 	});
 }
 
-// Lazy singleton for the browser — avoids module-scope instantiation that
-// leaks cache across SSR requests.
 let browserQueryClient: QueryClient | undefined;
 function getQueryClient() {
 	if (typeof window === "undefined") {
-		// SSR: always create a fresh client per request to prevent cross-user cache leaks
 		return makeQueryClient();
 	}
-	// Browser: reuse the same client across navigations
 	if (!browserQueryClient) browserQueryClient = makeQueryClient();
 	return browserQueryClient;
 }
@@ -69,7 +71,11 @@ const KumoLink = forwardRef<
 >(function KumoLink({ href, ...props }, ref) {
 	if (href && !href.startsWith("http")) {
 		return (
-			<RouterLink to={href} ref={ref} {...(props as Record<string, unknown>)} />
+			<RouterLink
+				to={href}
+				ref={ref}
+				{...(props as Record<string, unknown>)}
+			/>
 		);
 	}
 	return <a href={href} ref={ref} {...props} />;
@@ -77,7 +83,7 @@ const KumoLink = forwardRef<
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="zh-CN">
 			<head>
 				<meta charSet="UTF-8" />
 				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -88,7 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 					sizes="48x48 32x32 16x16"
 				/>
 				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-				<title>Agentic Inbox</title>
+				<title>智能体邮箱 · Agentic Inbox</title>
 				<Meta />
 				<Links />
 			</head>
@@ -110,8 +116,6 @@ export function HydrateFallback() {
 }
 
 export default function App() {
-	// Use useState to ensure each SSR request gets a fresh client while the
-	// browser reuses the same singleton across navigations.
 	const [queryClient] = useState(getQueryClient);
 	return (
 		<QueryClientProvider client={queryClient}>
@@ -127,18 +131,17 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-	let title = "Something went wrong";
-	let description = "An unexpected error occurred. Please try again.";
+	let title = "页面出现异常";
+	let description = "发生了意外错误，请刷新重试。";
 	let status: number | null = null;
 
 	if (isRouteErrorResponse(error)) {
 		status = error.status;
 		if (error.status === 404) {
-			title = "Page not found";
-			description =
-				"The page you're looking for doesn't exist or has been moved.";
+			title = "页面未找到";
+			description = "你访问的页面不存在或已被移动。";
 		} else {
-			title = `Error ${error.status}`;
+			title = `错误 ${error.status}`;
 			description = error.statusText || description;
 		}
 	} else if (error instanceof Error && import.meta.env.DEV) {
@@ -149,7 +152,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 		<div className="flex items-center justify-center min-h-screen p-8">
 			<Empty
 				icon={<WarningIcon size={48} className="text-kumo-inactive" />}
-				title={status === 404 ? "404 — Page not found" : title}
+				title={status === 404 ? "404 — 页面未找到" : title}
 				description={description}
 				contents={
 					<Button
@@ -158,7 +161,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 							window.location.href = "/";
 						}}
 					>
-						Go Home
+						返回首页
 					</Button>
 				}
 			/>

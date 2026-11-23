@@ -2,8 +2,17 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-/** Centralised query key factories for cache invalidation. */
+/** 统一维护 TanStack Query 缓存键工厂 */
 export const queryKeys = {
+	auth: {
+		status: ["auth", "status"] as const,
+		me: ["auth", "me"] as const,
+	},
+	apiKeys: ["api-keys"] as const,
+	admin: {
+		settings: ["admin", "settings"] as const,
+		users: ["admin", "users"] as const,
+	},
 	mailboxes: {
 		all: ["mailboxes"] as const,
 		detail: (id: string) => ["mailboxes", id] as const,

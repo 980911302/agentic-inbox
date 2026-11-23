@@ -10,12 +10,12 @@ export type ComposeMode = "new" | "reply" | "reply-all" | "forward";
 export interface ComposeOptions {
 	mode: ComposeMode;
 	originalEmail?: Email | null;
-	/** When editing a draft, this holds the draft email to pre-fill the composer */
+	/** 编辑草稿时传入对应草稿邮件对象 */
 	draftEmail?: Email | null;
 }
 
 interface UIState {
-	// Side panel state
+	// 邮件详情与写信侧栏状态
 	selectedEmailId: string | null;
 	isComposing: boolean;
 	_previousEmailId: string | null;
@@ -24,20 +24,22 @@ interface UIState {
 	closePanel: () => void;
 	closeCompose: () => void;
 
-	// Compose options
+	// 写信配置
 	composeOptions: ComposeOptions;
 
-	// Mobile sidebar
+	// 移动端左侧边栏
 	isSidebarOpen: boolean;
 	openSidebar: () => void;
 	closeSidebar: () => void;
 	toggleSidebar: () => void;
 
-	// Agent panel
-	isAgentPanelOpen: boolean;
-	toggleAgentPanel: () => void;
+	// 右侧 MCP 接入面板
+	isMcpPanelOpen: boolean;
+	toggleMcpPanel: () => void;
+	openMcpPanel: () => void;
+	closeMcpPanel: () => void;
 
-	// Legacy dialog support (kept for non-split views)
+	// 写信弹窗（用于非分栏视图）
 	isComposeModalOpen: boolean;
 	openComposeModal: (options?: ComposeOptions) => void;
 	closeComposeModal: () => void;
@@ -50,25 +52,32 @@ export const useUIStore = create<UIState>((set, get) => ({
 	composeOptions: { mode: "new", originalEmail: null },
 	isComposeModalOpen: false,
 	isSidebarOpen: false,
-	isAgentPanelOpen: true,
+	isMcpPanelOpen: false,
 
 	selectEmail: (id) => set({ selectedEmailId: id, isComposing: false }),
 
 	startCompose: (options) =>
 		set((state) => {
 			const mode = options?.mode || "new";
-			const isReplyOrForward = mode === "reply" || mode === "reply-all" || mode === "forward";
+			const isReplyOrForward =
+				mode === "reply" || mode === "reply-all" || mode === "forward";
 			return {
 				isComposing: true,
 				_previousEmailId: state.selectedEmailId,
-				// Keep selectedEmailId when replying/forwarding so the thread stays visible
 				selectedEmailId: isReplyOrForward ? state.selectedEmailId : null,
 				composeOptions: options || { mode: "new", originalEmail: null },
 				isSidebarOpen: false,
+				isMcpPanelOpen: false,
 			};
 		}),
 
-	closePanel: () => set({ selectedEmailId: null, isComposing: false, _previousEmailId: null, composeOptions: { mode: "new" as const, originalEmail: null } }),
+	closePanel: () =>
+		set({
+			selectedEmailId: null,
+			isComposing: false,
+			_previousEmailId: null,
+			composeOptions: { mode: "new" as const, originalEmail: null },
+		}),
 
 	closeCompose: () =>
 		set((state) => ({
@@ -82,7 +91,9 @@ export const useUIStore = create<UIState>((set, get) => ({
 	closeSidebar: () => set({ isSidebarOpen: false }),
 	toggleSidebar: () => set({ isSidebarOpen: !get().isSidebarOpen }),
 
-	toggleAgentPanel: () => set({ isAgentPanelOpen: !get().isAgentPanelOpen }),
+	toggleMcpPanel: () => set({ isMcpPanelOpen: !get().isMcpPanelOpen }),
+	openMcpPanel: () => set({ isMcpPanelOpen: true }),
+	closeMcpPanel: () => set({ isMcpPanelOpen: false }),
 
 	openComposeModal: (options) =>
 		set({

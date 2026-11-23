@@ -1,98 +1,65 @@
 <div align="center">
-  <h1>Agentic Inbox</h1>
-  <p><em>A self-hosted email client with an AI agent, running entirely on Cloudflare Workers</em></p>
+  <h1>Agentic Inbox · 智能体邮箱</h1>
+  <p><em>基于 Cloudflare Workers 的多用户自托管邮箱与 MCP 服务（1 账户 = 1 邮箱，独立密钥严格隔离）</em></p>
 </div>
 
-Agentic Inbox lets you send, receive, and manage emails through a modern web interface -- all powered by your own Cloudflare account. Incoming emails arrive via [Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/), each mailbox is isolated in its own [Durable Object](https://developers.cloudflare.com/durable-objects/) with a SQLite database, and attachments are stored in [R2](https://developers.cloudflare.com/r2/).
+Agentic Inbox 运行在你的 Cloudflare 账号上，通过 Cloudflare Email Routing 接收邮件、Cloudflare Email Service 发送邮件，使用 SQLite Durable Objects 存储邮件与账户数据，使用 R2 存储附件，并为每个账户提供独立的标准 MCP（Model Context Protocol）密钥接入能力。
 
-An **AI-powered Email Agent** can read your inbox, search conversations, and draft replies -- built with the [Cloudflare Agents SDK](https://developers.cloudflare.com/agents/) and [Workers AI](https://developers.cloudflare.com/workers-ai/).
+## 核心特性
 
-![Agentic Inbox screenshot](./demo_app.png)
+- **1 账户 = 1 邮箱严格隔离**：取消全局 Cloudflare Access 共享权限，改用标准邮箱 + 密码登录，每个用户只能访问与操作自己的专属邮箱。
+- **管理员控制台（`admin@<主域名>`）**：
+  - 首次访问 `/setup` 设置管理员密码（也支持通过环境变量 `ADMIN_PASSWORD` 自动初始化）；
+  - 登录时支持直接输入 `admin` 或完整邮箱 `admin@zll300.com`；
+  - 内置**开放自助注册**开关（默认关闭，防止滥用），支持手动创建/禁用/删除账户、重置密码，并可一键接管旧版部署遗留的历史邮箱。
+- **多密钥标准 MCP 服务（`/mcp`）**：
+  - 每个账户可在设置中创建多个独立的 MCP 密钥（支持备注、展示最后使用时间、随时单独吊销）；
+  - 采用标准 HTTP Header `Authorization: Bearer <API_KEY>` 鉴权，每个密钥严格锁定在所属账户的唯一邮箱，无跨邮箱越权风险；
+  - 已彻底移除内置 Workers AI 模型与内置聊天 Agent，零 AI 推理费用，专注为外部 AI Agent（Claude Code、Cursor、自研 Agent 等）提供干净可靠的邮件 MCP 工具。
+- **全中文界面**：收发信、会话聚合、搜索、文件夹管理、草稿、附件预览、设置与管理后台全面中文化。
 
+## 技术栈
 
-Read the blog post to learn more about Cloudflare Email Service and how to use it with the Agents SDK, MCP, and from the Wrangler CLI: [Email for Agents](https://blog.cloudflare.com/email-for-agents/).
+- **前端**：React 19、React Router v7、Tailwind CSS v4、Zustand、TanStack Query、TipTap、@cloudflare/kumo
+- **后端**：Hono、Cloudflare Workers、Durable Objects（`MailboxDO` + `AuthDO`，SQLite + Drizzle ORM）、R2、Email Routing / Email Service
+- **MCP 协议**：`agents/mcp` 无状态 Streamable HTTP（`@modelcontextprotocol/sdk`）
 
-## How to setup
-
-**Important**: Clicking the 'Deploy to Cloudflare' button is only one part of the setup. You must follow the **After deploying** steps as well. For a full step-by-step guide with screenshots, refer to this comment: 
-https://github.com/cloudflare/agentic-inbox/issues/4#issuecomment-4269118513
-
-### To set up
-
-1. Deploy to Cloudflare. The deploy flow will automatically provision R2, Durable Objects, and Workers AI. You'll be prompted for **DOMAINS**, which is the domain (yourdomain.com) you want to receive emails for (email@yourdomain.com).
-
-     [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/agentic-inbox)
-
-2. **Configure Cloudflare Access** -- Enable [one-click Cloudflare Access](https://developers.cloudflare.com/changelog/post/2025-10-03-one-click-access-for-workers/) on your Worker under Settings > Domains & Routes. The modal will show your `POLICY_AUD` and `TEAM_DOMAIN` values. `TEAM_DOMAIN` can be either your Access team URL or the full `.../cdn-cgi/access/certs` URL. **You must set these as secrets for your Worker.**
-3. **Set up Email Routing** -- In the Cloudflare dashboard, go to your domain > Email Routing and create a catch-all rule that forwards to this Worker
-4. **Enable Email Service** -- The worker needs the `send_email` binding to send outbound emails. See [Email Service docs](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
-5. **Create a mailbox** -- Visit your deployed app and create a mailbox for any address on your domain (e.g. `hello@example.com`)
-
-### Troubleshooting Access
-
-1. If you see `Invalid or expired Access token`, that usually means `POLICY_AUD` or `TEAM_DOMAIN` secrets are incorrect.
-   * Resolution: [turn Access off and back on for the Worker to get the Access modal again](https://developers.cloudflare.com/changelog/post/2025-10-03-one-click-access-for-workers/), then reset your Worker secrets to the latest `POLICY_AUD` and `TEAM_DOMAIN` values shown there.
-2. If you see `Cloudflare Access must be configured in production`, this application is intentionally enforcing Cloudflare Access so your inbox is not exposed to anyone on the internet.
-   * Resolution: enable Access using [one-click Cloudflare Access for Workers](https://developers.cloudflare.com/changelog/post/2025-10-03-one-click-access-for-workers/), then set the `POLICY_AUD` and `TEAM_DOMAIN` Worker secrets from the modal values.
-
-## Features
-
-- **Full email client** — Send and receive emails via Cloudflare Email Routing with a rich text composer, reply/forward threading, folder organization, search, and attachments
-- **Per-mailbox isolation** — Each mailbox runs in its own Durable Object with SQLite storage and R2 for attachments
-- **Built-in AI agent** — Side panel with 9 email tools for reading, searching, drafting, and sending
-- **Auto-draft on new email** — Agent automatically reads inbound emails and generates draft replies, always requiring explicit confirmation before sending
-- **Configurable and persistent** — Custom system prompts per mailbox, persistent chat history, streaming markdown responses, and tool call visibility
-
-## Stack
-
-- **Frontend:** React 19, React Router v7, Tailwind CSS, Zustand, TipTap, `@cloudflare/kumo`
-- **Backend:** Hono, Cloudflare Workers, Durable Objects (SQLite), R2, Email Routing
-- **AI Agent:** Cloudflare Agents SDK (`AIChatAgent`), AI SDK v6, Workers AI (`@cf/moonshotai/kimi-k2.5`), `react-markdown` + `remark-gfm`
-- **Auth:** Cloudflare Access JWT validation (required outside local development)
-
-## Getting Started
+## 本地开发
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Configuration
-
-1. Set your domain in `wrangler.jsonc`
-2. Create an R2 bucket named `agentic-inbox`: `wrangler r2 bucket create agentic-inbox`
-
-### Deploy
+## 部署与升级说明
 
 ```bash
 npm run deploy
 ```
 
-## Prerequisites
+> **从旧版（带 Cloudflare Access 与 EmailAgent）升级时的注意事项**：
+> 1. `wrangler.jsonc` 中已配置 `v4` Durable Objects 迁移，会自动新增 `AuthDO` 并安全移除旧版的 `EmailAgent` 和 `EmailMCP`，**完整保留 `MailboxDO` 中的历史邮件**。
+> 2. 请前往 Cloudflare Dashboard → Worker → **Settings > Domains & Routes**，**关闭此前开启的 Cloudflare Access**（否则外部 MCP 客户端请求 `/mcp` 和正常登录会被 CF Access 拦截）。
+> 3. 部署完成后首次访问站点，按提示为 `admin@zll300.com` 设置登录密码；若旧版已有其他邮箱数据，管理员登录后可在「管理员控制台」一键为历史邮箱设置密码并启用。
 
-- Cloudflare account with a domain
-- [Email Routing](https://developers.cloudflare.com/email-routing/) enabled for receiving
-- [Email Service](https://developers.cloudflare.com/email-service/) enabled for sending
-- [Workers AI](https://developers.cloudflare.com/workers-ai/) enabled (for the agent)
-- [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) configured for deployed/shared environments (required in production)
+## MCP 客户端接入示例
 
-Any user who passes the shared Cloudflare Access policy can access all mailboxes in this app by design. This includes the MCP server at `/mcp` -- external AI tools (Claude Code, Cursor, etc.) connected via MCP can operate on any mailbox by passing a `mailboxId` parameter. There is no per-mailbox authorization; the Cloudflare Access policy is the single trust boundary.
+在邮箱的 **MCP 密钥与设置** 中生成密钥后，在支持 Streamable HTTP 的 MCP 客户端中配置：
 
-## Architecture
-
-```
-┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Browser    │────>│  Hono Worker     │────>│  MailboxDO      │
-│  React SPA   │     │  (API + SSR)     │     │  (SQLite + R2)  │
-│  Agent Panel │     │                  │     └─────────────────┘
-└──────┬───────┘     │  /agents/* ──────┼────>┌─────────────────┐
-       │             │                  │     │  EmailAgent DO  │
-       │ WebSocket   │                  │     │  (AIChatAgent)  │
-       └─────────────┤                  │     │  9 email tools  │
-                     │                  │────>│  Workers AI     │
-                     └──────────────────┘     └─────────────────┘
+```json
+{
+  "mcpServers": {
+    "agentic-inbox": {
+      "type": "http",
+      "url": "https://<你的域名>/mcp",
+      "headers": {
+        "Authorization": "Bearer agx_你的密钥"
+      }
+    }
+  }
+}
 ```
 
-## License
+## 开源协议
 
-Apache 2.0 -- see [LICENSE](LICENSE).
+Apache 2.0 — 详见 [LICENSE](LICENSE)。

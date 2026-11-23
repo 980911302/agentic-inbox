@@ -2,11 +2,66 @@
 @import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 
-body {
-  margin: 0;
+:root {
+  --font-sans-cjk: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "Inter", system-ui, sans-serif;
+  --font-mono-code: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, ui-monospace, monospace;
 }
 
-/* TipTap list styles */
+html {
+  font-family: var(--font-sans-cjk);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans-cjk);
+}
+
+code,
+pre,
+.font-mono {
+  font-family: var(--font-mono-code);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 登录、注册与初始化页的柔和背景画布 */
+.auth-canvas {
+  background-image:
+    radial-gradient(ellipse 75% 45% at 50% -8%, rgba(59, 130, 246, 0.08), transparent 70%),
+    radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.16) 1px, transparent 0);
+  background-size: 100% 100%, 24px 24px;
+}
+
+/* 细腻滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.55);
+}
+
+/* TipTap 富文本编辑器列表样式 */
 .ProseMirror ul {
   list-style-type: disc;
   padding-left: 1.5em;

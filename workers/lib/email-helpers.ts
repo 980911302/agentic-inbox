@@ -59,12 +59,12 @@ export function validateSender(
 	const fromEmail = (typeof from === "string" ? from : from.email).toLowerCase();
 
 	if (fromEmail !== mailboxId.toLowerCase()) {
-		throw new SenderValidationError("From address must match the mailbox email address");
+		throw new SenderValidationError("发件人地址必须与当前登录邮箱一致");
 	}
 
 	const fromDomain = fromEmail.split("@")[1];
 	if (!fromDomain) {
-		throw new SenderValidationError("Invalid sender email address");
+		throw new SenderValidationError("无效的发件人邮箱地址");
 	}
 
 	return { toStr, fromEmail, fromDomain };
@@ -216,7 +216,7 @@ export function buildQuotedReplyBlock(original: {
 	const plainBody = stripHtmlToText(original.body);
 	const bodyToQuote = escapeHtml(plainBody).replace(/\n/g, "<br>");
 
-	return `<br><blockquote style="border-left: 2px solid #ccc; margin: 0; padding-left: 1em; color: #666;">On ${originalDate}, ${originalSender} wrote:<br><br>${bodyToQuote}</blockquote>`;
+	return `<br><blockquote style="border-left: 2px solid #ccc; margin: 0; padding-left: 1em; color: #666;">在 ${originalDate}，${originalSender} 写道：<br><br>${bodyToQuote}</blockquote>`;
 }
 
 // ── Tool Logic (getFullEmail / getFullThread) ──────────────────────

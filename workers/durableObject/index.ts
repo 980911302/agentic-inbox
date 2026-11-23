@@ -799,7 +799,7 @@ export class MailboxDO extends DurableObject<Env> {
 		)][0] as { cnt: number } | undefined;
 
 		if ((hourRow?.cnt ?? 0) >= 20) {
-			return "Rate limit exceeded: max 20 emails per hour per mailbox";
+			return "发送频率超出限制：每个邮箱每小时最多发送 20 封邮件";
 		}
 
 		const dayRow = [...this.ctx.storage.sql.exec(
@@ -810,7 +810,7 @@ export class MailboxDO extends DurableObject<Env> {
 		)][0] as { cnt: number } | undefined;
 
 		if ((dayRow?.cnt ?? 0) >= 100) {
-			return "Rate limit exceeded: max 100 emails per day per mailbox";
+			return "发送频率超出限制：每个邮箱每天最多发送 100 封邮件";
 		}
 
 		return null;
@@ -868,5 +868,34 @@ export class MailboxDO extends DurableObject<Env> {
 		if (attachments.length > 0) {
 			this.db.insert(schema.attachments).values(attachments).run();
 		}
+	}
+
+	/**
+	 * 清空当前邮箱中的所有邮件、附件与自定义文件夹，并返回待清理的 R2 附件键列表
+	 */
+	async purgeAll(): Promise<string[]> {
+		const attRows = this.db
+			.select({
+				id: schema.attachments.id,
+				email_id: schema.attachments.email_id,
+				filename: schema.attachments.filename,
+			})
+			.from(schema.attachments)
+			.all();
+
+		const keys = attRows.map(
+			(att) => `attachments/${att.email_id}/${att.id}/${att.filename}`,
+		);
+
+		this.ctx.storage.transactionSync(() => {
+			this.db.delete(schema.attachments).run();
+			this.db.delete(schema.emails).run();
+			this.db
+				.delete(schema.folders)
+				.where(eq(schema.folders.is_deletable, 1))
+				.run();
+		});
+
+		return keys;
 	}
 }
