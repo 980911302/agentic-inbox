@@ -928,61 +928,81 @@ app.get(
 
 const MAX_EMAIL_SIZE = 25 * 1024 * 1024;
 
-async function streamToArrayBuffer(stream: ReadableStream, streamSize: number) {
-	if (streamSize > MAX_EMAIL_SIZE) {
+interface IncomingEmailEvent {
+	from?: string;
+	to?: string;
+	raw: ReadableStream<Uint8Array>;
+	rawSize?: number;
+}
+
+async function readRawEmail(
+	stream: ReadableStream<Uint8Array>,
+	declaredSize?: number,
+): Promise<ArrayBuffer> {
+	if (declaredSize !== undefined && declaredSize > MAX_EMAIL_SIZE) {
 		throw new Error(
-			`Email too large: ${streamSize} bytes exceeds ${MAX_EMAIL_SIZE} byte limit`,
+			`Email too large: ${declaredSize} bytes exceeds ${MAX_EMAIL_SIZE} byte limit`,
 		);
 	}
-	if (streamSize <= 0) {
-		throw new Error(`Invalid stream size: ${streamSize}`);
+	const buffer = await new Response(stream).arrayBuffer();
+	if (buffer.byteLength === 0) {
+		throw new Error("Received empty email payload");
 	}
-	const result = new Uint8Array(streamSize);
-	let bytesRead = 0;
-	const reader = stream.getReader();
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		if (bytesRead + value.length > streamSize) {
-			reader.cancel();
-			throw new Error("Stream exceeds declared size");
-		}
-		result.set(value, bytesRead);
-		bytesRead += value.length;
+	if (buffer.byteLength > MAX_EMAIL_SIZE) {
+		throw new Error(
+			`Email too large: ${buffer.byteLength} bytes exceeds ${MAX_EMAIL_SIZE} byte limit`,
+		);
 	}
-	return result;
+	return buffer;
+}
+
+/** 去除子地址 +tag 别名（如 user+github@domain -> user@domain） */
+function stripSubaddress(addr: string): string | null {
+	const atIndex = addr.indexOf("@");
+	if (atIndex <= 0) return null;
+	const local = addr.slice(0, atIndex);
+	const plusIndex = local.indexOf("+");
+	if (plusIndex <= 0) return null;
+	return `${local.slice(0, plusIndex)}@${addr.slice(atIndex + 1)}`;
 }
 
 async function receiveEmail(
-	event: { raw: ReadableStream; rawSize: number },
+	event: IncomingEmailEvent,
 	env: Env,
 	_ctx: ExecutionContext,
 ) {
-	const rawEmail = await streamToArrayBuffer(event.raw, event.rawSize);
+	const envelopeTo = event.to?.trim().toLowerCase() || "";
+	const envelopeFrom = event.from?.trim().toLowerCase() || "";
+
+	const rawEmail = await readRawEmail(event.raw, event.rawSize);
 	const parsedEmail = await new PostalMime().parse(rawEmail);
 
-	if (!parsedEmail.to?.length || !parsedEmail.to[0].address) {
-		throw new Error("received email with empty to");
-	}
-
 	const allowedAddresses = ((env.EMAIL_ADDRESSES ?? []) as string[]).map((a) =>
-		a.toLowerCase(),
+		a.trim().toLowerCase(),
 	);
 	const configuredDomains = getConfiguredDomains(env);
-	const allRecipients = parsedEmail.to
-		.map((t) => t.address?.toLowerCase())
+	const mimeTo = (parsedEmail.to || [])
+		.map((t) => t.address?.trim().toLowerCase())
 		.filter(Boolean) as string[];
 	const ccRecipients = (parsedEmail.cc || [])
-		.map((e) => e.address?.toLowerCase())
+		.map((e) => e.address?.trim().toLowerCase())
 		.filter(Boolean) as string[];
 	const bccRecipients = (parsedEmail.bcc || [])
-		.map((e) => e.address?.toLowerCase())
+		.map((e) => e.address?.trim().toLowerCase())
 		.filter(Boolean) as string[];
 
-	// 收集所有可能的收件人（按 To -> Cc -> Bcc 顺序去重），支持多人收件或抄送命中本域邮箱
-	const candidateRecipients = Array.from(
-		new Set([...allRecipients, ...ccRecipients, ...bccRecipients]),
-	).filter((addr) => {
+	// 优先使用 Cloudflare Email Routing 提供的 SMTP 信封收件人 event.to，
+	// 正确支持转发、密送（BCC）、邮件列表且避免同域多人收信重复投递；
+	// 仅在缺失 event.to（如本地测试构造事件）时回退至 MIME 头解析。
+	const rawCandidates = envelopeTo
+		? [envelopeTo]
+		: Array.from(new Set([...mimeTo, ...ccRecipients, ...bccRecipients]));
+
+	if (rawCandidates.length === 0) {
+		throw new Error("received email with empty envelope and MIME recipient");
+	}
+
+	const candidateRecipients = rawCandidates.filter((addr) => {
 		if (allowedAddresses.length > 0 && !allowedAddresses.includes(addr)) {
 			return false;
 		}
@@ -994,27 +1014,71 @@ async function receiveEmail(
 	});
 
 	if (candidateRecipients.length === 0) {
-		console.log("Ignoring email: no recipient matches configured DOMAINS / EMAIL_ADDRESSES.");
+		console.log(
+			`Ignoring email (envelopeTo=${envelopeTo || "none"}, mimeTo=${mimeTo.join(",") || "none"}): no recipient matches configured DOMAINS / EMAIL_ADDRESSES.`,
+		);
 		return;
 	}
 
 	const authStub = getAuthStub(env);
-	const targetMailboxes: string[] = [];
-	for (const addr of candidateRecipients) {
+	const adminEmail = getAdminEmail(env);
+	const targetMailboxSet = new Set<string>();
+
+	const resolveExistingMailbox = async (
+		addr: string,
+	): Promise<{ mailbox: string | null; disabled: boolean }> => {
 		const user = await authStub.getUser(addr);
 		if (user?.disabled) {
+			return { mailbox: null, disabled: true };
+		}
+		if (user) {
+			return { mailbox: addr, disabled: false };
+		}
+		const hasR2Config = Boolean(await env.BUCKET.head(`mailboxes/${addr}.json`));
+		if (hasR2Config) {
+			return { mailbox: addr, disabled: false };
+		}
+		return { mailbox: null, disabled: false };
+	};
+
+	for (const addr of candidateRecipients) {
+		const exact = await resolveExistingMailbox(addr);
+		if (exact.disabled) {
 			console.log(`Ignoring email for ${addr}: account is disabled`);
 			continue;
 		}
-		const hasR2Config = Boolean(await env.BUCKET.head(`mailboxes/${addr}.json`));
-		if (user || hasR2Config) {
-			targetMailboxes.push(addr);
+		if (exact.mailbox) {
+			targetMailboxSet.add(exact.mailbox);
+			continue;
 		}
+
+		// 若为带 +tag 的子地址别名，优先尝试匹配主邮箱
+		const baseAddr = stripSubaddress(addr);
+		if (baseAddr) {
+			const baseMatch = await resolveExistingMailbox(baseAddr);
+			if (baseMatch.disabled) {
+				console.log(
+					`Ignoring email for ${addr} (base ${baseAddr}): account is disabled`,
+				);
+				continue;
+			}
+			if (baseMatch.mailbox) {
+				targetMailboxSet.add(baseMatch.mailbox);
+				continue;
+			}
+		}
+
+		// 未匹配到任何已有账号/邮箱时，统一兜底转入管理员邮箱（如 admin@zll300.com）
+		console.log(
+			`No mailbox found for ${addr}, routing catch-all email to admin mailbox ${adminEmail}`,
+		);
+		targetMailboxSet.add(adminEmail);
 	}
 
+	const targetMailboxes = Array.from(targetMailboxSet);
 	if (targetMailboxes.length === 0) {
 		console.log(
-			`Ignoring email for ${candidateRecipients.join(", ")}: no matching mailbox exists`,
+			`Ignoring email for ${candidateRecipients.join(", ")}: all matching accounts are disabled`,
 		);
 		return;
 	}
@@ -1033,6 +1097,27 @@ async function receiveEmail(
 		? extractMsgId(parsedEmail.messageId)
 		: null;
 
+	const senderAddress = (
+		parsedEmail.from?.address ||
+		envelopeFrom ||
+		""
+	)
+		.trim()
+		.toLowerCase();
+	const displayRecipients =
+		mimeTo.length > 0 ? mimeTo.join(", ") : envelopeTo || targetMailboxes.join(", ");
+	const mergedBcc = Array.from(
+		new Set([
+			...bccRecipients,
+			...(envelopeTo &&
+			mimeTo.length > 0 &&
+			!mimeTo.includes(envelopeTo) &&
+			!ccRecipients.includes(envelopeTo)
+				? [envelopeTo]
+				: []),
+		]),
+	);
+
 	for (const mailboxId of targetMailboxes) {
 		const messageId = crypto.randomUUID();
 		const stub = getMailboxStub(env, mailboxId);
@@ -1049,15 +1134,16 @@ async function receiveEmail(
 					`attachments/${messageId}/${attId}/${filename}`,
 					att.content,
 				);
+				const contentSize =
+					typeof att.content === "string"
+						? new TextEncoder().encode(att.content).byteLength
+						: att.content.byteLength;
 				attachmentData.push({
 					id: attId,
 					email_id: messageId,
 					filename,
-					mimetype: att.mimeType,
-					size:
-						typeof att.content === "string"
-							? att.content.length
-							: att.content.byteLength,
+					mimetype: att.mimeType || "application/octet-stream",
+					size: contentSize,
 					content_id: att.contentId || null,
 					disposition: att.disposition || "attachment",
 				});
@@ -1068,7 +1154,7 @@ async function receiveEmail(
 		if (!inReplyTo && emailReferences.length === 0) {
 			const subjectThread = await (stub as any).findThreadBySubject(
 				parsedEmail.subject || "",
-				parsedEmail.from?.address || undefined,
+				senderAddress || undefined,
 			);
 			if (subjectThread) threadId = subjectThread;
 		}
@@ -1078,10 +1164,10 @@ async function receiveEmail(
 			{
 				id: messageId,
 				subject: parsedEmail.subject || "",
-				sender: (parsedEmail.from?.address || "").toLowerCase(),
-				recipient: allRecipients.join(", "),
+				sender: senderAddress,
+				recipient: displayRecipients,
 				cc: ccRecipients.join(", ") || null,
-				bcc: bccRecipients.join(", ") || null,
+				bcc: mergedBcc.join(", ") || null,
 				date: new Date().toISOString(),
 				body: parsedEmail.html || parsedEmail.text || "",
 				in_reply_to: inReplyTo,
@@ -1092,6 +1178,9 @@ async function receiveEmail(
 				raw_headers: JSON.stringify(parsedEmail.headers),
 			},
 			attachmentData,
+		);
+		console.log(
+			`Stored incoming email ${messageId} (from=${senderAddress || "unknown"}, envelopeTo=${envelopeTo || "none"}) into mailbox ${mailboxId}`,
 		);
 	}
 }

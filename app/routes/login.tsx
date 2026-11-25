@@ -66,7 +66,7 @@ export default function LoginRoute() {
 
 	if (statusLoading || userLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen bg-kumo-recessed">
+			<div className="flex items-center justify-center min-h-screen craft-canvas">
 				<Loader size="lg" />
 			</div>
 		);

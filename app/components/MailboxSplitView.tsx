@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import ComposePanel from "~/components/ComposePanel";
 import EmailPanel from "~/components/EmailPanel";
+import { useUIStore } from "~/hooks/useUIStore";
 
 interface MailboxSplitViewProps {
 	selectedEmailId: string | null;
@@ -17,21 +18,28 @@ export default function MailboxSplitView({
 	isComposing,
 	children,
 }: MailboxSplitViewProps) {
+	const isFocusMode = useUIStore((s) => s.isFocusMode);
 	const isPanelOpen = selectedEmailId !== null || isComposing;
+	const hideListInFocus = isFocusMode && selectedEmailId !== null && !isComposing;
 
 	return (
-		<div className="flex h-full">
-			<div
-				className={`flex flex-col min-w-0 shrink-0 ${
-					isPanelOpen
-						? "hidden md:flex md:w-[380px] md:border-r md:border-kumo-line"
-						: "w-full"
-				}`}
-			>
-				{children}
-			</div>
+		<div className="flex h-full min-h-0">
+			{/* 左侧邮件列表栏（专注阅读模式下自动收起） */}
+			{!hideListInFocus && (
+				<div
+					className={`relative flex flex-col min-w-0 shrink-0 ${
+						isPanelOpen
+							? "hidden md:flex md:w-[360px] lg:w-[396px] xl:w-[420px] md:border-r md:border-kumo-line"
+							: "w-full"
+					}`}
+				>
+					{children}
+				</div>
+			)}
+
+			{/* 右侧读信 / 写信工作台 */}
 			{isPanelOpen && (
-				<div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full md:w-auto">
+				<div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full md:w-auto animate-craft-panel bg-kumo-base">
 					{isComposing && !selectedEmailId ? (
 						<ComposePanel />
 					) : isComposing && selectedEmailId ? (

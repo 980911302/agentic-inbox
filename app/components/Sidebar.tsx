@@ -3,7 +3,6 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 import {
-	Badge,
 	Button,
 	Dialog,
 	Input,
@@ -15,11 +14,15 @@ import {
 	FileIcon,
 	FolderIcon,
 	KeyIcon,
+	KeyboardIcon,
+	MoonIcon,
 	PaperPlaneTiltIcon,
 	PencilSimpleIcon,
 	PlusIcon,
 	ShieldCheckIcon,
+	SidebarSimpleIcon,
 	SignOutIcon,
+	SunIcon,
 	TrashIcon,
 	TrayIcon,
 } from "@phosphor-icons/react";
@@ -27,6 +30,7 @@ import { useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate, useParams } from "react-router";
 import { Folders, SYSTEM_FOLDER_IDS } from "shared/folders";
 import { useUIStore } from "~/hooks/useUIStore";
+import { getInitials } from "~/lib/ui-helpers";
 import { useCurrentUser, useLogout } from "~/queries/auth";
 import {
 	useCreateFolder,
@@ -35,61 +39,89 @@ import {
 } from "~/queries/folders";
 import { useMailbox } from "~/queries/mailboxes";
 
-const FOLDER_ICONS: Record<string, React.ReactNode> = {
-	[Folders.INBOX]: <TrayIcon size={17} weight="regular" />,
-	[Folders.SENT]: <PaperPlaneTiltIcon size={17} weight="regular" />,
-	[Folders.DRAFT]: <FileIcon size={17} weight="regular" />,
-	[Folders.ARCHIVE]: <ArchiveIcon size={17} weight="regular" />,
-	[Folders.TRASH]: <TrashIcon size={17} weight="regular" />,
-};
-
 const SYSTEM_FOLDER_LINKS = [
-	{ id: Folders.INBOX, label: "收件箱" },
-	{ id: Folders.SENT, label: "已发送" },
-	{ id: Folders.DRAFT, label: "草稿箱" },
-	{ id: Folders.ARCHIVE, label: "归档" },
-	{ id: Folders.TRASH, label: "回收站" },
+	{ id: Folders.INBOX, label: "收件箱", Icon: TrayIcon, shortcut: "G I" },
+	{ id: Folders.SENT, label: "已发送", Icon: PaperPlaneTiltIcon, shortcut: "G S" },
+	{ id: Folders.DRAFT, label: "草稿箱", Icon: FileIcon, shortcut: "G D" },
+	{ id: Folders.ARCHIVE, label: "归档", Icon: ArchiveIcon, shortcut: "G A" },
+	{ id: Folders.TRASH, label: "回收站", Icon: TrashIcon, shortcut: "G T" },
 ];
 
 interface FolderLinkProps {
 	to: string;
-	icon: React.ReactNode;
+	Icon: React.ComponentType<{ size?: number; weight?: "regular" | "fill" | "duotone" }>;
 	label: string;
 	unreadCount?: number;
+	collapsed?: boolean;
+	shortcutHint?: string;
 	onClick?: () => void;
 	onDelete?: () => void;
 }
 
 function FolderLink({
 	to,
-	icon,
+	Icon,
 	label,
 	unreadCount,
+	collapsed,
+	shortcutHint,
 	onClick,
 	onDelete,
 }: FolderLinkProps) {
-	return (
+	const linkEl = (
 		<div className="group/folder relative flex items-center">
 			<NavLink
 				to={to}
 				onClick={onClick}
 				className={({ isActive }) =>
-					`flex-1 flex items-center gap-2.5 py-2 px-3 rounded-lg text-[13.5px] transition-colors ${
+					`relative flex-1 flex items-center rounded-xl text-[13.5px] transition-all duration-150 ${
+						collapsed
+							? "justify-center h-10 w-10 mx-auto px-0"
+							: "gap-2.5 py-2 px-3"
+					} ${
 						isActive
-							? "bg-kumo-base font-medium text-kumo-default shadow-[0_1px_2px_rgba(15,23,42,0.05)] ring-1 ring-kumo-line"
-							: "text-kumo-strong hover:bg-kumo-tint/80"
+							? "bg-[var(--craft-accent-soft)] text-kumo-default font-medium shadow-[inset_0_0_0_1px_var(--craft-accent-ring)]"
+							: "text-kumo-strong hover:text-kumo-default hover:bg-[var(--surface-hover)]"
 					}`
 				}
 			>
-				<span className="shrink-0 opacity-85">{icon}</span>
-				<span className="truncate flex-1">{label}</span>
-				{unreadCount != null && unreadCount > 0 && (
-					<span className="tabular-nums text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-kumo-brand/12 text-kumo-brand">
-						{unreadCount}
-					</span>
+				{({ isActive }) => (
+					<>
+						{!collapsed && isActive && (
+							<span className="absolute left-1 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full bg-[var(--craft-accent)]" />
+						)}
+						<span
+							className={`shrink-0 transition-colors ${
+								isActive
+									? "text-[var(--craft-accent)]"
+									: "text-kumo-subtle group-hover/folder:text-kumo-strong"
+							}`}
+						>
+							<Icon size={17} weight={isActive ? "fill" : "regular"} />
+						</span>
+						{!collapsed && (
+							<>
+								<span className="truncate flex-1">{label}</span>
+								{unreadCount != null && unreadCount > 0 && (
+									<span
+										className={`tabular-nums text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
+											isActive
+												? "bg-[var(--craft-accent)] text-white"
+												: "bg-[var(--craft-accent-soft)] text-[var(--craft-accent)]"
+										}`}
+									>
+										{unreadCount}
+									</span>
+								)}
+							</>
+						)}
+						{collapsed && unreadCount != null && unreadCount > 0 && (
+							<span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[var(--craft-accent)] ring-2 ring-[var(--surface-canvas)]" />
+						)}
+					</>
 				)}
 			</NavLink>
-			{onDelete && (
+			{!collapsed && onDelete && (
 				<button
 					type="button"
 					onClick={(e) => {
@@ -99,13 +131,31 @@ function FolderLink({
 					}}
 					title="删除文件夹"
 					aria-label={`删除文件夹 ${label}`}
-					className="opacity-0 group-hover/folder:opacity-100 focus:opacity-100 absolute right-2 p-1 rounded text-kumo-subtle hover:text-kumo-destructive hover:bg-kumo-base transition-all cursor-pointer bg-transparent border-0"
+					className="opacity-0 group-hover/folder:opacity-100 focus:opacity-100 absolute right-2 p-1 rounded-md text-kumo-subtle hover:text-kumo-danger hover:bg-kumo-base transition-all cursor-pointer bg-transparent border-0"
 				>
 					<TrashIcon size={13} />
 				</button>
 			)}
 		</div>
 	);
+
+	if (collapsed) {
+		return (
+			<Tooltip
+				content={
+					unreadCount
+						? `${label}（${unreadCount} 未读）${shortcutHint ? ` · ${shortcutHint}` : ""}`
+						: `${label}${shortcutHint ? ` · ${shortcutHint}` : ""}`
+				}
+				side="right"
+				asChild
+			>
+				{linkEl}
+			</Tooltip>
+		);
+	}
+
+	return linkEl;
 }
 
 export default function Sidebar() {
@@ -118,7 +168,16 @@ export default function Sidebar() {
 	const { data: folders = [] } = useFolders(mailboxId);
 	const createFolderMutation = useCreateFolder();
 	const deleteFolderMutation = useDeleteFolder();
-	const { startCompose, openComposeModal, closeSidebar } = useUIStore();
+	const {
+		startCompose,
+		openComposeModal,
+		closeSidebar,
+		isSidebarCollapsed,
+		toggleSidebarCollapsed,
+		theme,
+		toggleTheme,
+		toggleShortcuts,
+	} = useUIStore();
 	const { data: currentMailbox } = useMailbox(mailboxId);
 	const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
 	const [newFolderName, setNewFolderName] = useState("");
@@ -147,7 +206,6 @@ export default function Sidebar() {
 		if (isSplitPage) {
 			startCompose();
 		} else {
-			// 在设置页或管理后台点击「写邮件」时使用弹窗写信，无需跳离当前页
 			openComposeModal();
 			closeSidebar();
 		}
@@ -213,91 +271,169 @@ export default function Sidebar() {
 		return mailboxId?.split("@")[0] || "我的邮箱";
 	}, [currentMailbox, user, mailboxId]);
 
-	const avatarChar = (displayName || mailboxId || "U").trim().charAt(0).toUpperCase();
-
-	const handleNavClick = () => {
-		closeSidebar();
-	};
+	const avatarChar = getInitials(displayName || mailboxId || "U");
+	const handleNavClick = () => closeSidebar();
 
 	return (
-		<aside className="h-full w-64 bg-kumo-recessed flex flex-col shrink-0 border-r border-kumo-line">
-			{/* 当前账户身份卡片 */}
-			<div className="px-3.5 pt-4 pb-2">
-				<div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-kumo-base/75 border border-kumo-line/80">
-					<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 text-sm font-semibold ring-1 ring-blue-600/15">
-						{avatarChar}
-					</div>
-					<div className="min-w-0 flex-1">
-						<div className="flex items-center gap-1.5">
-							<span className="text-sm font-semibold text-kumo-default truncate">
-								{displayName}
-							</span>
-							{user?.role === "admin" && (
-								<Badge variant="primary">管理员</Badge>
-							)}
-						</div>
-						<div className="text-[11.5px] text-kumo-subtle truncate font-mono mt-0.5">
-							{currentMailbox?.email || mailboxId}
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* 写邮件 */}
-			<div className="px-3.5 py-2.5">
-				<Button
-					variant="primary"
-					icon={<PencilSimpleIcon size={16} />}
-					onClick={handleComposeClick}
-					className="w-full justify-center"
+		<aside className="h-full w-full flex flex-col bg-[var(--surface-rail)] md:bg-transparent border-r border-kumo-line md:border-r-0 select-none">
+			{/* 顶部身份卡片 + 折叠按钮 */}
+			<div className={isSidebarCollapsed ? "px-2 pt-3 pb-2" : "px-2.5 pt-2.5 pb-2"}>
+				<div
+					className={`flex items-center rounded-xl transition-all ${
+						isSidebarCollapsed
+							? "justify-center py-1.5"
+							: "gap-2.5 px-2.5 py-2 craft-card"
+					}`}
 				>
-					写邮件
-				</Button>
+					<Tooltip
+						content={
+							isSidebarCollapsed
+								? `${displayName} (${currentMailbox?.email || mailboxId})`
+								: ""
+						}
+						side="right"
+						asChild
+					>
+						<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#6e7bf2] to-[#4f46e5] text-white text-xs font-semibold shadow-[0_2px_10px_-2px_rgba(99,114,241,0.6)]">
+							{avatarChar}
+						</div>
+					</Tooltip>
+					{!isSidebarCollapsed && (
+						<>
+							<div className="min-w-0 flex-1">
+								<div className="flex items-center gap-1.5">
+									<span className="text-[13.5px] font-semibold text-kumo-default truncate">
+										{displayName}
+									</span>
+									{user?.role === "admin" && (
+										<span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-md craft-accent-badge">
+											管理员
+										</span>
+									)}
+								</div>
+								<div className="text-[11px] text-kumo-subtle truncate font-mono mt-0.5">
+									{currentMailbox?.email || mailboxId}
+								</div>
+							</div>
+							<Tooltip content="折叠导航栏 [" side="right" asChild>
+								<button
+									type="button"
+									onClick={toggleSidebarCollapsed}
+									className="hidden md:flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+									aria-label="折叠侧边栏"
+								>
+									<SidebarSimpleIcon size={15} />
+								</button>
+							</Tooltip>
+						</>
+					)}
+				</div>
+				{isSidebarCollapsed && (
+					<div className="hidden md:flex justify-center mt-1.5">
+						<Tooltip content="展开导航栏 [" side="right" asChild>
+							<button
+								type="button"
+								onClick={toggleSidebarCollapsed}
+								className="flex h-8 w-8 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+								aria-label="展开侧边栏"
+							>
+								<SidebarSimpleIcon size={16} />
+							</button>
+						</Tooltip>
+					</div>
+				)}
 			</div>
 
-			{/* 文件夹导航 */}
-			<nav className="flex-1 overflow-y-auto px-2.5 py-1 space-y-0.5">
+			{/* 写邮件核心动作按钮 */}
+			<div className={isSidebarCollapsed ? "px-2 py-2 flex justify-center" : "px-2.5 py-2"}>
+				<Tooltip content={isSidebarCollapsed ? "写邮件 (C)" : ""} side="right" asChild>
+					<button
+						type="button"
+						onClick={handleComposeClick}
+						className={`group flex items-center justify-center gap-2 rounded-xl font-medium text-[13.5px] text-white bg-[var(--craft-accent)] hover:bg-[var(--craft-accent-hover)] active:scale-[0.985] transition-all cursor-pointer border-0 shadow-[0_6px_20px_-6px_var(--craft-accent-ring),inset_0_1px_0_rgba(255,255,255,0.22)] ${
+							isSidebarCollapsed ? "h-10 w-10 p-0" : "w-full h-9.5 px-3.5"
+						}`}
+					>
+						<PencilSimpleIcon size={16} weight="bold" />
+						{!isSidebarCollapsed && (
+							<>
+								<span className="flex-1 text-left">写邮件</span>
+								<kbd className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-md font-mono text-[10px] bg-white/18 text-white/95 border border-white/20">
+									C
+								</kbd>
+							</>
+						)}
+					</button>
+				</Tooltip>
+			</div>
+
+			{/* 文件夹列表 */}
+			<nav
+				className={`flex-1 overflow-y-auto py-1 space-y-0.5 ${
+					isSidebarCollapsed ? "px-2" : "px-2.5"
+				}`}
+			>
 				{SYSTEM_FOLDER_LINKS.map((folder) => (
 					<FolderLink
 						key={folder.id}
 						to={`/mailbox/${encodedMailboxId}/emails/${folder.id}`}
-						icon={FOLDER_ICONS[folder.id]}
+						Icon={folder.Icon}
 						label={folder.label}
 						unreadCount={getUnreadCount(folder.id)}
+						collapsed={isSidebarCollapsed}
+						shortcutHint={folder.shortcut}
 						onClick={handleNavClick}
 					/>
 				))}
 
 				{/* 自定义文件夹 */}
-				<div className="pt-5">
-					<div className="flex items-center justify-between px-3 mb-1.5">
-						<span className="text-[11px] tracking-wider font-semibold text-kumo-subtle">
-							自定义文件夹
-						</span>
-						<Tooltip content="新建文件夹" asChild>
-							<Button
-								variant="ghost"
-								shape="square"
-								size="sm"
-								icon={<PlusIcon size={15} />}
-								onClick={() => setIsCreateFolderOpen(true)}
-								aria-label="新建文件夹"
-							/>
-						</Tooltip>
-					</div>
+				<div className="pt-4">
+					{!isSidebarCollapsed ? (
+						<div className="flex items-center justify-between px-3 mb-1.5">
+							<span className="text-[11px] tracking-wider font-medium text-kumo-subtle uppercase">
+								自定义文件夹
+							</span>
+							<Tooltip content="新建文件夹" asChild>
+								<button
+									type="button"
+									onClick={() => setIsCreateFolderOpen(true)}
+									className="flex h-6 w-6 items-center justify-center rounded-md text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+									aria-label="新建文件夹"
+								>
+									<PlusIcon size={14} />
+								</button>
+							</Tooltip>
+						</div>
+					) : (
+						<div className="flex justify-center mb-1.5 pt-1 border-t border-kumo-line">
+							<Tooltip content="新建文件夹" side="right" asChild>
+								<button
+									type="button"
+									onClick={() => setIsCreateFolderOpen(true)}
+									className="flex h-8 w-8 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+									aria-label="新建文件夹"
+								>
+									<PlusIcon size={15} />
+								</button>
+							</Tooltip>
+						</div>
+					)}
 					{customFolders.length === 0 ? (
-						<p className="px-3 py-1.5 text-xs text-kumo-subtle/75">
-							暂无自定义文件夹
-						</p>
+						!isSidebarCollapsed && (
+							<p className="px-3 py-1.5 text-xs text-kumo-subtle/75">
+								暂无自定义文件夹
+							</p>
+						)
 					) : (
 						<div className="space-y-0.5">
 							{customFolders.map((folder) => (
 								<FolderLink
 									key={folder.id}
 									to={`/mailbox/${encodedMailboxId}/emails/${folder.id}`}
-									icon={<FolderIcon size={17} />}
+									Icon={FolderIcon}
 									label={folder.name}
 									unreadCount={folder.unreadCount}
+									collapsed={isSidebarCollapsed}
 									onClick={handleNavClick}
 									onDelete={() => handleDeleteFolder(folder.id, folder.name)}
 								/>
@@ -307,31 +443,89 @@ export default function Sidebar() {
 				</div>
 			</nav>
 
-			{/* 底部管理与退出栏 */}
-			<div className="p-2.5 border-t border-kumo-line space-y-0.5 shrink-0 bg-kumo-recessed">
+			{/* 底部快捷工具区 */}
+			<div
+				className={`border-t border-kumo-line space-y-0.5 shrink-0 ${
+					isSidebarCollapsed ? "p-2" : "p-2.5"
+				}`}
+			>
 				<FolderLink
 					to={`/mailbox/${encodedMailboxId}/settings`}
-					icon={<KeyIcon size={17} />}
+					Icon={KeyIcon}
 					label="MCP 密钥与设置"
+					collapsed={isSidebarCollapsed}
+					shortcutHint="G M"
 					onClick={handleNavClick}
 				/>
 				{user?.role === "admin" && (
 					<FolderLink
 						to={`/mailbox/${encodedMailboxId}/admin`}
-						icon={<ShieldCheckIcon size={17} />}
+						Icon={ShieldCheckIcon}
 						label="管理员控制台"
+						collapsed={isSidebarCollapsed}
 						onClick={handleNavClick}
 					/>
 				)}
-				<button
-					type="button"
-					onClick={handleLogout}
-					disabled={logoutMutation.isPending}
-					className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg text-[13.5px] text-kumo-subtle hover:text-kumo-default hover:bg-kumo-tint/80 transition-colors cursor-pointer bg-transparent border-0"
-				>
-					<SignOutIcon size={17} />
-					<span>退出登录</span>
-				</button>
+
+				{!isSidebarCollapsed ? (
+					<div className="flex items-center justify-between gap-1 pt-1.5 mt-1 border-t border-kumo-line/60">
+						<Tooltip content={theme === "dark" ? "切至暖白浅色" : "切至黑曜石深色"} side="top" asChild>
+							<button
+								type="button"
+								onClick={toggleTheme}
+								className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+							>
+								{theme === "dark" ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+								<span>{theme === "dark" ? "浅色" : "深色"}</span>
+							</button>
+						</Tooltip>
+						<Tooltip content="键盘快捷键 (?)" side="top" asChild>
+							<button
+								type="button"
+								onClick={toggleShortcuts}
+								className="flex h-7 w-7 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+								aria-label="快捷键"
+							>
+								<KeyboardIcon size={15} />
+							</button>
+						</Tooltip>
+						<Tooltip content="退出登录" side="top" asChild>
+							<button
+								type="button"
+								onClick={handleLogout}
+								disabled={logoutMutation.isPending}
+								className="flex h-7 w-7 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-danger hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0 ml-auto"
+								aria-label="退出登录"
+							>
+								<SignOutIcon size={15} />
+							</button>
+						</Tooltip>
+					</div>
+				) : (
+					<div className="flex flex-col items-center gap-1 pt-1.5 mt-1 border-t border-kumo-line/60">
+						<Tooltip content={theme === "dark" ? "切换浅色模式" : "切换深色模式"} side="right" asChild>
+							<button
+								type="button"
+								onClick={toggleTheme}
+								className="flex h-9 w-9 items-center justify-center rounded-xl text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+								aria-label="切换主题"
+							>
+								{theme === "dark" ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+							</button>
+						</Tooltip>
+						<Tooltip content="退出登录" side="right" asChild>
+							<button
+								type="button"
+								onClick={handleLogout}
+								disabled={logoutMutation.isPending}
+								className="flex h-9 w-9 items-center justify-center rounded-xl text-kumo-subtle hover:text-kumo-danger hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+								aria-label="退出登录"
+							>
+								<SignOutIcon size={16} />
+							</button>
+						</Tooltip>
+					</div>
+				)}
 			</div>
 
 			{/* 新建文件夹弹窗 */}

@@ -2,8 +2,12 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { PaperclipIcon, FileIcon, ImageIcon } from "@phosphor-icons/react";
-import { formatBytes, getAttachmentUrl, getNonInlineAttachments } from "~/lib/utils";
+import { FileIcon, ImageIcon, PaperclipIcon } from "@phosphor-icons/react";
+import {
+	formatBytes,
+	getAttachmentUrl,
+	getNonInlineAttachments,
+} from "~/lib/utils";
 import type { Attachment } from "~/types";
 
 interface EmailAttachmentListProps {
@@ -28,12 +32,15 @@ export default function EmailAttachmentList({
 	const files = getNonInlineAttachments(attachments);
 	if (files.length === 0) return null;
 
+	const chipClass =
+		"group flex items-center gap-2 rounded-xl border border-kumo-line bg-kumo-base/80 px-3 py-2 text-xs transition-all hover:border-[var(--craft-accent-ring)] hover:bg-[var(--surface-hover)] cursor-pointer";
+
 	return (
 		<div className={className}>
 			{showHeading && (
-				<div className="flex items-center gap-2 mb-2">
-					<PaperclipIcon size={14} className="text-kumo-subtle" />
-					<span className="text-sm font-medium text-kumo-default">
+				<div className="flex items-center gap-1.5 mb-2.5">
+					<PaperclipIcon size={13} className="text-[var(--craft-accent)]" />
+					<span className="text-xs font-medium text-kumo-strong">
 						{files.length} 个附件
 					</span>
 				</div>
@@ -49,13 +56,18 @@ export default function EmailAttachmentList({
 								key={attachment.id}
 								type="button"
 								onClick={() => onPreviewImage(url, attachment.filename)}
-								className="flex items-center gap-2 rounded-md border border-kumo-line px-3 py-2 transition-colors hover:bg-kumo-tint text-sm text-left"
+								className={`${chipClass} text-left`}
 							>
-								<ImageIcon size={16} className="text-kumo-subtle shrink-0" />
-								<span className="text-kumo-default font-medium truncate max-w-[140px]">
+								<ImageIcon
+									size={15}
+									className="text-[var(--craft-accent)] shrink-0"
+								/>
+								<span className="text-kumo-default font-medium truncate max-w-[160px]">
 									{attachment.filename}
 								</span>
-								<span className="text-kumo-subtle">{formatBytes(attachment.size)}</span>
+								<span className="text-kumo-subtle font-mono text-[11px]">
+									{formatBytes(attachment.size)}
+								</span>
 							</button>
 						);
 					}
@@ -66,13 +78,15 @@ export default function EmailAttachmentList({
 							href={url}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="flex items-center gap-2 rounded-md border border-kumo-line px-3 py-2 no-underline transition-colors hover:bg-kumo-tint text-sm"
+							className={`${chipClass} no-underline`}
 						>
-							<FileIcon size={16} className="text-kumo-subtle shrink-0" />
-							<span className="text-kumo-default font-medium truncate max-w-[140px]">
+							<FileIcon size={15} className="text-kumo-subtle shrink-0" />
+							<span className="text-kumo-default font-medium truncate max-w-[160px]">
 								{attachment.filename}
 							</span>
-							<span className="text-kumo-subtle">{formatBytes(attachment.size)}</span>
+							<span className="text-kumo-subtle font-mono text-[11px]">
+								{formatBytes(attachment.size)}
+							</span>
 						</a>
 					);
 				})}

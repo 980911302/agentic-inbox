@@ -16,7 +16,7 @@ import {
 	QueryClient,
 	QueryClientProvider,
 } from "@tanstack/react-query";
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import {
 	isRouteErrorResponse,
 	Links,
@@ -26,6 +26,7 @@ import {
 	Scripts,
 	ScrollRestoration,
 } from "react-router";
+import { THEME_STORAGE_KEY, useUIStore } from "~/hooks/useUIStore";
 import { ApiError } from "~/services/api";
 import "./index.css";
 
@@ -33,8 +34,8 @@ function makeQueryClient() {
 	return new QueryClient({
 		defaultOptions: {
 			queries: {
-				staleTime: 30_000,
-				refetchOnWindowFocus: false,
+				staleTime: 15_000,
+				refetchOnWindowFocus: true,
 				retry: (failureCount, error) => {
 					// 4xx 错误不自动重试
 					if (
@@ -81,11 +82,15 @@ const KumoLink = forwardRef<
 	return <a href={href} ref={ref} {...props} />;
 });
 
+/** 首屏无闪烁主题初始化脚本（默认黑曜石深色，支持本地记忆） */
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});var m=(t==='light'||t==='dark')?t:'dark';document.documentElement.setAttribute('data-theme','kumo');document.documentElement.setAttribute('data-mode',m);}catch(e){document.documentElement.setAttribute('data-theme','kumo');document.documentElement.setAttribute('data-mode','dark');}})();`;
+
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="zh-CN">
+		<html lang="zh-CN" data-theme="kumo" data-mode="dark" suppressHydrationWarning>
 			<head>
 				<meta charSet="UTF-8" />
+				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 				<link
 					rel="icon"
@@ -98,7 +103,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Meta />
 				<Links />
 			</head>
-			<body className="bg-kumo-recessed text-kumo-default antialiased">
+			<body className="craft-canvas text-kumo-default antialiased selection:bg-[var(--craft-accent-soft)] selection:text-[var(--craft-accent)]">
 				{children}
 				<ScrollRestoration />
 				<Scripts />
@@ -109,14 +114,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export function HydrateFallback() {
 	return (
-		<div className="flex items-center justify-center h-screen">
+		<div className="flex flex-col items-center justify-center h-screen gap-3 craft-canvas">
 			<Loader size="lg" />
+			<span className="text-xs tracking-wider text-kumo-subtle uppercase">
+				Agentic Inbox
+			</span>
 		</div>
 	);
 }
 
 export default function App() {
 	const [queryClient] = useState(getQueryClient);
+	const setTheme = useUIStore((s) => s.setTheme);
+
+	// 客户端水合后同步本地存储的主题到 Zustand 状态
+	useEffect(() => {
+		try {
+			const stored = localStorage.getItem(THEME_STORAGE_KEY);
+			if (stored === "light" || stored === "dark") {
+				setTheme(stored);
+			} else {
+				setTheme("dark");
+			}
+		} catch {
+			setTheme("dark");
+		}
+	}, [setTheme]);
+
 	return (
 		<QueryClientProvider client={queryClient}>
 			<LinkProvider component={KumoLink}>
@@ -149,22 +173,24 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 	}
 
 	return (
-		<div className="flex items-center justify-center min-h-screen p-8">
-			<Empty
-				icon={<WarningIcon size={48} className="text-kumo-inactive" />}
-				title={status === 404 ? "404 — 页面未找到" : title}
-				description={description}
-				contents={
-					<Button
-						variant="primary"
-						onClick={() => {
-							window.location.href = "/";
-						}}
-					>
-						返回首页
-					</Button>
-				}
-			/>
+		<div className="flex items-center justify-center min-h-screen p-8 craft-canvas">
+			<div className="craft-panel rounded-2xl p-8 max-w-md w-full">
+				<Empty
+					icon={<WarningIcon size={44} className="text-kumo-subtle" />}
+					title={status === 404 ? "404 — 页面未找到" : title}
+					description={description}
+					contents={
+						<Button
+							variant="primary"
+							onClick={() => {
+								window.location.href = "/";
+							}}
+						>
+							返回首页
+						</Button>
+					}
+				/>
+			</div>
 		</div>
 	);
 }

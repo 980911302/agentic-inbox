@@ -63,7 +63,7 @@ export default function SetupRoute() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen bg-kumo-recessed">
+			<div className="flex items-center justify-center min-h-screen craft-canvas">
 				<Loader size="lg" />
 			</div>
 		);

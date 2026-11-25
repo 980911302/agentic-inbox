@@ -3,8 +3,134 @@
 @import "tailwindcss";
 
 :root {
-  --font-sans-cjk: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "Inter", system-ui, sans-serif;
+  --font-sans-cjk: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono-code: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, ui-monospace, monospace;
+}
+
+/* ==========================================================================
+   2026 Craft Design System — Obsidian Dark & Warm Alabaster Light
+   Harmonizes all @cloudflare/kumo tokens + custom spatial surface tokens
+   ========================================================================== */
+
+@layer base {
+  /* ── Light Mode: Warm Alabaster (Superhuman Day × Linear Light) ─────── */
+  :root,
+  :root[data-theme="kumo"],
+  :root[data-mode="light"],
+  [data-mode="light"] {
+    color-scheme: light;
+
+    --surface-canvas: #f3f2ee;
+    --surface-rail: #efeee9;
+    --surface-panel: #ffffff;
+    --surface-glass: rgba(255, 255, 255, 0.84);
+    --surface-glass-strong: rgba(255, 255, 255, 0.94);
+    --surface-selected: rgba(79, 92, 230, 0.08);
+    --surface-hover: rgba(20, 22, 29, 0.038);
+
+    --craft-accent: #4f5ce6;
+    --craft-accent-hover: #424fd4;
+    --craft-accent-soft: rgba(79, 92, 230, 0.1);
+    --craft-accent-ring: rgba(79, 92, 230, 0.24);
+    --craft-border: rgba(20, 22, 29, 0.08);
+    --craft-border-strong: rgba(20, 22, 29, 0.14);
+    --craft-shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px -14px rgba(15, 23, 42, 0.08);
+    --craft-shadow-float: 0 18px 50px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(20, 22, 29, 0.08);
+    --craft-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    --craft-kbd-bg: #ffffff;
+    --craft-kbd-border: rgba(20, 22, 29, 0.14);
+    --craft-kbd-shadow: 0 1px 0 rgba(20, 22, 29, 0.08);
+
+    /* Harmonized Kumo tokens */
+    --text-color-kumo-default: #14161d;
+    --text-color-kumo-inverse: #ffffff;
+    --text-color-kumo-strong: #434a59;
+    --text-color-kumo-subtle: #747c8e;
+    --text-color-kumo-inactive: #9aa1b2;
+    --text-color-kumo-brand: #4f5ce6;
+    --text-color-kumo-link: #4653db;
+    --text-color-kumo-success: #15803d;
+    --text-color-kumo-danger: #dc2626;
+    --text-color-kumo-warning: #b45309;
+
+    --color-kumo-surface: #f7f6f2;
+    --color-kumo-recessed: #f4f3ef;
+    --color-kumo-base: #ffffff;
+    --color-kumo-tint: #f1f0ec;
+    --color-kumo-contrast: #14161d;
+    --color-kumo-elevated: #ffffff;
+    --color-kumo-overlay: #f4f3ef;
+    --color-kumo-control: #ffffff;
+    --color-kumo-interact: #dcdad3;
+    --color-kumo-fill: #e8e6df;
+    --color-kumo-fill-hover: #dedbd2;
+    --color-kumo-brand: #4f5ce6;
+    --color-kumo-brand-hover: #424fd4;
+    --color-kumo-line: rgba(20, 22, 29, 0.09);
+    --color-kumo-ring: rgba(79, 92, 230, 0.25);
+    --color-kumo-tip-shadow: rgba(15, 23, 42, 0.08);
+    --color-kumo-tip-stroke: rgba(20, 22, 29, 0.08);
+  }
+
+  /* ── Dark Mode: Obsidian Craft (Linear × Superhuman Night) ──────────── */
+  :root[data-mode="dark"],
+  [data-mode="dark"]:not([data-theme]),
+  [data-mode="dark"] [data-theme="kumo"],
+  [data-theme="kumo"][data-mode="dark"],
+  [data-theme="kumo"] [data-mode="dark"] {
+    color-scheme: dark;
+
+    --surface-canvas: #08090d;
+    --surface-rail: #0b0d13;
+    --surface-panel: #11131b;
+    --surface-glass: rgba(17, 19, 27, 0.8);
+    --surface-glass-strong: rgba(20, 23, 33, 0.92);
+    --surface-selected: rgba(110, 123, 242, 0.12);
+    --surface-hover: rgba(255, 255, 255, 0.042);
+
+    --craft-accent: #7382ff;
+    --craft-accent-hover: #6070f7;
+    --craft-accent-soft: rgba(115, 130, 255, 0.14);
+    --craft-accent-ring: rgba(115, 130, 255, 0.3);
+    --craft-border: rgba(255, 255, 255, 0.075);
+    --craft-border-strong: rgba(255, 255, 255, 0.13);
+    --craft-shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 40px -20px rgba(0, 0, 0, 0.72);
+    --craft-shadow-float: 0 24px 64px -16px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    --craft-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    --craft-kbd-bg: #181b26;
+    --craft-kbd-border: rgba(255, 255, 255, 0.11);
+    --craft-kbd-shadow: 0 1px 0 rgba(0, 0, 0, 0.65);
+
+    /* Harmonized Kumo tokens (also fixes Kumo's default dark subtle text bug) */
+    --text-color-kumo-default: #f1f3f8;
+    --text-color-kumo-inverse: #0c0e14;
+    --text-color-kumo-strong: #b4bccd;
+    --text-color-kumo-subtle: #778197;
+    --text-color-kumo-inactive: #535c70;
+    --text-color-kumo-brand: #8492ff;
+    --text-color-kumo-link: #8c9aff;
+    --text-color-kumo-success: #4ade80;
+    --text-color-kumo-danger: #f87171;
+    --text-color-kumo-warning: #fbbf24;
+
+    --color-kumo-surface: #08090d;
+    --color-kumo-recessed: #0d0f16;
+    --color-kumo-base: #11131b;
+    --color-kumo-tint: #181b26;
+    --color-kumo-contrast: #f1f3f8;
+    --color-kumo-elevated: #161924;
+    --color-kumo-overlay: #1a1e2b;
+    --color-kumo-control: #141722;
+    --color-kumo-interact: #2a3042;
+    --color-kumo-fill: #1c202e;
+    --color-kumo-fill-hover: #252b3d;
+    --color-kumo-brand: #6372f1;
+    --color-kumo-brand-hover: #5261e6;
+    --color-kumo-line: rgba(255, 255, 255, 0.08);
+    --color-kumo-ring: rgba(115, 130, 255, 0.35);
+    --color-kumo-tip-shadow: transparent;
+    --color-kumo-tip-stroke: rgba(255, 255, 255, 0.1);
+  }
 }
 
 html {
@@ -12,11 +138,14 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  background-color: var(--surface-canvas);
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans-cjk);
+  background-color: var(--surface-canvas);
+  color: var(--text-color-kumo-default);
 }
 
 code,
@@ -29,18 +158,156 @@ pre,
   font-variant-numeric: tabular-nums;
 }
 
-/* 登录、注册与初始化页的柔和背景画布 */
-.auth-canvas {
-  background-image:
-    radial-gradient(ellipse 75% 45% at 50% -8%, rgba(59, 130, 246, 0.08), transparent 70%),
-    radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.16) 1px, transparent 0);
-  background-size: 100% 100%, 24px 24px;
+/* ── Craft Surface Primitives ─────────────────────────────────────────── */
+
+.craft-canvas {
+  background-color: var(--surface-canvas);
+  background-image: radial-gradient(
+    ellipse 65% 42% at 50% -10%,
+    var(--craft-accent-soft),
+    transparent 72%
+  );
 }
 
-/* 细腻滚动条样式 */
+.craft-panel {
+  background-color: var(--surface-panel);
+  border: 1px solid var(--craft-border);
+  box-shadow: var(--craft-inset-highlight), var(--craft-shadow-panel);
+}
+
+.craft-card {
+  background-color: var(--surface-panel);
+  border: 1px solid var(--craft-border);
+  box-shadow: var(--craft-inset-highlight);
+}
+
+.craft-glass {
+  background-color: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--craft-border-strong);
+  box-shadow: var(--craft-inset-highlight), var(--craft-shadow-float);
+}
+
+.craft-glass-strong {
+  background-color: var(--surface-glass-strong);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--craft-border-strong);
+  box-shadow: var(--craft-inset-highlight), var(--craft-shadow-float);
+}
+
+.craft-accent-badge {
+  background-color: var(--craft-accent-soft);
+  color: var(--craft-accent);
+  border: 1px solid var(--craft-accent-ring);
+}
+
+.craft-row-selected {
+  background-color: var(--surface-selected);
+}
+
+.craft-row-hover:hover {
+  background-color: var(--surface-hover);
+}
+
+/* ── Auth Canvas (Ambient Aurora + Fine Micro-Dot Grid) ──────────────── */
+
+.auth-canvas {
+  background-color: var(--surface-canvas);
+  background-image:
+    radial-gradient(ellipse 75% 48% at 50% -12%, var(--craft-accent-soft), transparent 68%),
+    radial-gradient(ellipse 45% 32% at 85% 95%, rgba(16, 185, 129, 0.05), transparent 65%),
+    radial-gradient(circle at 1px 1px, var(--craft-border) 1px, transparent 0);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+}
+
+/* ── Tactile Keycap Badge (<kbd>) ────────────────────────────────────── */
+
+.craft-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 5px;
+  font-family: var(--font-mono-code);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-color-kumo-subtle);
+  background-color: var(--craft-kbd-bg);
+  border: 1px solid var(--craft-kbd-border);
+  box-shadow: var(--craft-kbd-shadow);
+  user-select: none;
+}
+
+/* ── Subtle Craft Micro-Animations ───────────────────────────────────── */
+
+@keyframes craftFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes craftScaleIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes craftSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes craftPanelIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-craft-fade {
+  animation: craftFadeIn 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-craft-scale {
+  animation: craftScaleIn 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-craft-dock {
+  animation: craftSlideUp 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-craft-panel {
+  animation: craftPanelIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Refined Scrollbars ──────────────────────────────────────────────── */
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.24) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -53,15 +320,28 @@ pre,
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.35);
+  background-color: rgba(148, 163, 184, 0.24);
   border-radius: 9999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(148, 163, 184, 0.55);
+  background-color: rgba(148, 163, 184, 0.42);
 }
 
-/* TipTap 富文本编辑器列表样式 */
+/* ── TipTap Rich Text Editor Styles ──────────────────────────────────── */
+
+.ProseMirror {
+  color: var(--text-color-kumo-default);
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--text-color-kumo-subtle);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 .ProseMirror ul {
   list-style-type: disc;
   padding-left: 1.5em;
@@ -79,4 +359,10 @@ pre,
 .ProseMirror li {
   margin-top: 0.25em;
   margin-bottom: 0.25em;
+}
+
+.ProseMirror a {
+  color: var(--craft-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

@@ -37,10 +37,11 @@ npm run dev
 npm run deploy
 ```
 
-> **从旧版（带 Cloudflare Access 与 EmailAgent）升级时的注意事项**：
+> **从旧版（带 Cloudflare Access 与 EmailAgent）升级与收信配置说明**：
 > 1. `wrangler.jsonc` 中已配置 `v4` Durable Objects 迁移，会自动新增 `AuthDO` 并安全移除旧版的 `EmailAgent` 和 `EmailMCP`，**完整保留 `MailboxDO` 中的历史邮件**。
-> 2. 请前往 Cloudflare Dashboard → Worker → **Settings > Domains & Routes**，**关闭此前开启的 Cloudflare Access**（否则外部 MCP 客户端请求 `/mcp` 和正常登录会被 CF Access 拦截）。
-> 3. 部署完成后首次访问站点，按提示为 `admin@zll300.com` 设置登录密码；若旧版已有其他邮箱数据，管理员登录后可在「管理员控制台」一键为历史邮箱设置密码并启用。
+> 2. 请前往 Cloudflare Dashboard → 域名 → **Email → Email Routing → Routing rules**，**启用 Catch-all 规则**并选择动作 **Send to a Worker → `agentic-inbox`**。已创建账户的邮件会投递至各自邮箱，未创建账户前缀的本域邮件会统一兜底转入管理员邮箱（`admin@<主域名>`）。
+> 3. 请前往 Cloudflare Dashboard → Worker → **Settings > Domains & Routes**，**关闭此前开启的 Cloudflare Access**（否则外部 MCP 客户端请求 `/mcp` 和正常登录会被 CF Access 拦截）。
+> 4. 部署完成后首次访问站点，按提示为 `admin@zll300.com` 设置登录密码；若旧版已有其他邮箱数据，管理员登录后可在「管理员控制台」一键为历史邮箱设置密码并启用。
 
 ## MCP 客户端接入示例
 

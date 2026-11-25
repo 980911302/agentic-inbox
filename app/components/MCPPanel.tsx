@@ -2,7 +2,7 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Badge, Button, Tooltip } from "@cloudflare/kumo";
+import { Button, Tooltip } from "@cloudflare/kumo";
 import {
 	CheckIcon,
 	CopyIcon,
@@ -31,38 +31,36 @@ function CopyButton({ text }: { text: string }) {
 
 	return (
 		<Tooltip content={copied ? "已复制" : "复制"} asChild>
-			<Button
-				variant="ghost"
-				shape="square"
-				size="sm"
-				icon={
-					copied ? (
-						<CheckIcon size={13} weight="bold" className="text-kumo-success" />
-					) : (
-						<CopyIcon size={13} />
-					)
-				}
+			<button
+				type="button"
 				onClick={handleCopy}
 				aria-label="复制到剪贴板"
-			/>
+				className="flex h-7 w-7 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+			>
+				{copied ? (
+					<CheckIcon size={13} weight="bold" className="text-emerald-400" />
+				) : (
+					<CopyIcon size={13} />
+				)}
+			</button>
 		</Tooltip>
 	);
 }
 
 const TOOLS = [
-	{ name: "get_mailbox_info", desc: "获取当前邮箱与文件夹信息" },
-	{ name: "list_emails", desc: "列出指定文件夹的邮件" },
-	{ name: "get_email", desc: "读取单封邮件正文与附件" },
-	{ name: "get_thread", desc: "获取完整邮件会话串" },
-	{ name: "search_emails", desc: "按关键词搜索邮件" },
-	{ name: "draft_reply", desc: "起草回复保存到草稿箱" },
-	{ name: "create_draft", desc: "创建新草稿邮件" },
-	{ name: "update_draft", desc: "修改已有草稿内容" },
+	{ name: "get_mailbox_info", desc: "邮箱与文件夹状态" },
+	{ name: "list_emails", desc: "列出文件夹邮件" },
+	{ name: "get_email", desc: "读取邮件正文与附件" },
+	{ name: "get_thread", desc: "获取完整会话串" },
+	{ name: "search_emails", desc: "按语法检索邮件" },
+	{ name: "draft_reply", desc: "起草回复草稿" },
+	{ name: "create_draft", desc: "创建新草稿" },
+	{ name: "update_draft", desc: "修改草稿内容" },
 	{ name: "send_reply", desc: "发送回复邮件" },
 	{ name: "send_email", desc: "发送新邮件" },
-	{ name: "mark_email_read", desc: "标记已读或未读" },
-	{ name: "move_email", desc: "移动邮件至指定文件夹" },
-	{ name: "delete_email", desc: "永久删除指定邮件" },
+	{ name: "mark_email_read", desc: "标记已读/未读" },
+	{ name: "move_email", desc: "移动至文件夹" },
+	{ name: "delete_email", desc: "永久删除邮件" },
 ];
 
 export default function MCPPanel() {
@@ -94,41 +92,44 @@ export default function MCPPanel() {
 	);
 
 	return (
-		<div className="flex flex-col h-full bg-kumo-base">
+		<div className="flex flex-col h-full bg-transparent">
 			{/* 顶部标题 */}
-			<div className="h-14 flex items-center justify-between px-4 border-b border-kumo-line shrink-0">
-				<div className="flex items-center gap-2">
-					<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+			<div className="h-[54px] flex items-center justify-between px-4 border-b border-kumo-line shrink-0">
+				<div className="flex items-center gap-2.5">
+					<div className="flex h-7 w-7 items-center justify-center rounded-lg craft-accent-badge">
 						<PlugsIcon size={15} weight="duotone" />
 					</div>
-					<span className="text-sm font-semibold text-kumo-default">
-						MCP 接入指南
+					<span className="text-[14px] font-semibold text-kumo-default">
+						MCP 接入面板
 					</span>
-					<Badge variant="secondary">{apiKeys.length} 个密钥</Badge>
+					<span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-400 border border-emerald-500/20 tabular-nums">
+						<span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+						{apiKeys.length} 密钥
+					</span>
 				</div>
-				<Button
-					variant="ghost"
-					shape="square"
-					size="sm"
-					icon={<XIcon size={16} />}
+				<button
+					type="button"
 					onClick={closeMcpPanel}
 					aria-label="关闭 MCP 面板"
-				/>
+					className="flex h-7 w-7 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+				>
+					<XIcon size={15} />
+				</button>
 			</div>
 
 			<div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
 				{/* 当前绑定说明 */}
-				<div className="rounded-xl border border-kumo-line bg-kumo-recessed/60 p-3.5 space-y-2.5">
-					<div className="flex items-center justify-between gap-2">
-						<span className="text-[11px] font-medium text-kumo-subtle">
-							当前密钥作用域（1:1 严格绑定）
+				<div className="rounded-xl border border-kumo-line bg-kumo-recessed/55 p-3.5 space-y-2.5">
+					<div className="flex items-center justify-between">
+						<span className="text-[11px] font-medium tracking-wider text-kumo-subtle uppercase">
+							1:1 严格隔离作用域
 						</span>
 					</div>
-					<div className="font-mono text-xs font-medium text-kumo-default bg-kumo-base px-2.5 py-1.5 rounded-lg border border-kumo-line truncate">
+					<div className="font-mono text-xs font-medium text-kumo-default bg-kumo-base px-2.5 py-2 rounded-lg border border-kumo-line truncate">
 						{mailboxId}
 					</div>
 					<p className="text-xs text-kumo-subtle leading-relaxed">
-						每个密钥仅可读写与收发此邮箱的邮件，所有工具无需手动传递邮箱参数，天然隔离。
+						每个 Bearer 密钥仅绑定当前账户邮箱，无需额外传递邮箱 ID，天然防止越权。
 					</p>
 					<Button
 						variant="primary"
@@ -146,16 +147,16 @@ export default function MCPPanel() {
 					</Button>
 				</div>
 
-				{/* MCP 地址 */}
+				{/* MCP 端点地址 */}
 				<div className="space-y-1.5">
-					<label className="text-xs font-medium text-kumo-strong block">
-						服务地址（Streamable HTTP）
+					<label className="text-[11.5px] font-medium text-kumo-strong block">
+						Streamable HTTP 端点
 					</label>
 					<div className="relative">
 						<div className="absolute right-1.5 top-1/2 -translate-y-1/2">
 							<CopyButton text={mcpUrl} />
 						</div>
-						<div className="bg-kumo-recessed text-kumo-default font-mono text-[11.5px] px-3 py-2.5 pr-10 rounded-lg border border-kumo-line break-all leading-relaxed">
+						<div className="bg-kumo-recessed/70 text-kumo-default font-mono text-[11.5px] px-3 py-2.5 pr-10 rounded-xl border border-kumo-line break-all leading-relaxed">
 							{mcpUrl}
 						</div>
 					</div>
@@ -164,37 +165,40 @@ export default function MCPPanel() {
 				{/* 标准客户端配置 */}
 				<div className="space-y-1.5">
 					<div className="flex items-center justify-between">
-						<label className="text-xs font-medium text-kumo-strong">
-							客户端配置模板（Bearer 鉴权）
+						<label className="text-[11.5px] font-medium text-kumo-strong">
+							客户端配置（Bearer 鉴权）
 						</label>
 						<CopyButton text={configSnippet} />
 					</div>
-					<pre className="bg-kumo-recessed text-kumo-default font-mono text-[11px] p-3 rounded-lg border border-kumo-line overflow-x-auto leading-relaxed m-0">
+					<pre className="bg-kumo-recessed/70 text-kumo-default font-mono text-[11px] p-3.5 rounded-xl border border-kumo-line overflow-x-auto leading-relaxed m-0">
 						{configSnippet}
 					</pre>
 				</div>
 
-				{/* 可用工具列表 */}
+				{/* 可用工具目录 */}
 				<div className="space-y-2 pb-4">
-					<h4 className="text-xs font-semibold text-kumo-subtle px-0.5">
-						可用工具（{TOOLS.length} 项）
-					</h4>
-					<div className="border border-kumo-line rounded-xl divide-y divide-kumo-line overflow-hidden">
+					<div className="flex items-center justify-between px-0.5">
+						<h4 className="text-[11px] font-semibold tracking-wider text-kumo-subtle uppercase">
+							可用工具目录
+						</h4>
+						<span className="text-[11px] font-mono text-kumo-subtle">
+							{TOOLS.length} tools
+						</span>
+					</div>
+					<div className="border border-kumo-line rounded-xl divide-y divide-kumo-line overflow-hidden bg-kumo-recessed/35">
 						{TOOLS.map((tool) => (
 							<div
 								key={tool.name}
-								className="flex items-center gap-2.5 px-3 py-2 bg-kumo-base hover:bg-kumo-recessed/50 transition-colors"
+								className="flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--surface-hover)] transition-colors"
 							>
 								<WrenchIcon
 									size={12}
 									weight="bold"
-									className="text-blue-600 shrink-0"
+									className="text-[var(--craft-accent)] shrink-0"
 								/>
-								<div className="min-w-0 flex-1">
-									<span className="text-xs font-mono font-medium text-kumo-default">
-										{tool.name}
-									</span>
-								</div>
+								<span className="text-xs font-mono font-medium text-kumo-default truncate flex-1">
+									{tool.name}
+								</span>
 								<span className="text-[11px] text-kumo-subtle shrink-0">
 									{tool.desc}
 								</span>

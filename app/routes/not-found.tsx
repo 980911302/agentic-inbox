@@ -10,17 +10,19 @@ export default function NotFoundRoute() {
 	const navigate = useNavigate();
 
 	return (
-		<div className="flex items-center justify-center min-h-screen">
-			<Empty
-				icon={<WarningIcon size={48} className="text-kumo-inactive" />}
-				title="404 — 页面不存在"
-				description="你访问的页面不存在或已被移除。"
-				contents={
-					<Button variant="primary" size="sm" onClick={() => navigate("/")}>
-						返回首页
-					</Button>
-				}
-			/>
+		<div className="flex items-center justify-center min-h-screen p-6 craft-canvas">
+			<div className="craft-panel rounded-2xl p-8 max-w-md w-full">
+				<Empty
+					icon={<WarningIcon size={44} className="text-kumo-subtle" />}
+					title="404 — 页面不存在"
+					description="你访问的页面不存在或已被移除。"
+					contents={
+						<Button variant="primary" size="sm" onClick={() => navigate("/")}>
+							返回首页
+						</Button>
+					}
+				/>
+			</div>
 		</div>
 	);
 }

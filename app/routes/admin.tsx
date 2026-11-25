@@ -28,6 +28,7 @@ import {
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { formatQuotedDate } from "shared/dates";
+import { getAvatarTone, getInitials } from "~/lib/ui-helpers";
 import {
 	useAdminCreateUser,
 	useAdminDeleteUser,
@@ -222,22 +223,20 @@ export default function AdminRoute() {
 	};
 
 	return (
-		<div className="h-full overflow-y-auto bg-kumo-recessed/35">
-			<div className="max-w-4xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-6 pb-14">
+		<div className="h-full overflow-y-auto bg-kumo-recessed/25">
+			<div className="max-w-4xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-6 pb-16">
 				{/* 标题区 */}
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div>
-						<div className="flex items-center gap-2">
-							<ShieldCheckIcon
-								size={22}
-								weight="duotone"
-								className="text-blue-600"
-							/>
+						<div className="flex items-center gap-2.5">
+							<div className="flex h-8 w-8 items-center justify-center rounded-xl craft-accent-badge">
+								<ShieldCheckIcon size={18} weight="duotone" />
+							</div>
 							<h1 className="text-xl font-semibold tracking-tight text-kumo-default">
 								管理员控制台
 							</h1>
 						</div>
-						<p className="text-sm text-kumo-subtle mt-1">
+						<p className="text-[13.5px] text-kumo-subtle mt-1.5">
 							控制系统注册策略，集中管理域名下的独立邮箱账户
 						</p>
 					</div>
@@ -253,10 +252,12 @@ export default function AdminRoute() {
 
 				{/* 概览指标卡 */}
 				<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-					<div className="rounded-xl border border-kumo-line bg-kumo-base p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-						<span className="text-xs text-kumo-subtle">邮箱账户总数</span>
-						<div className="mt-1.5 flex items-baseline gap-2">
-							<span className="text-2xl font-semibold tabular-nums text-kumo-default">
+					<div className="relative overflow-hidden rounded-2xl craft-card p-5">
+						<span className="text-[11px] font-medium tracking-wider text-kumo-subtle uppercase">
+							邮箱账户总数
+						</span>
+						<div className="mt-2 flex items-baseline gap-2">
+							<span className="text-3xl font-semibold tabular-nums tracking-tight text-kumo-default">
 								{users.length}
 							</span>
 							<span className="text-xs text-kumo-subtle">
@@ -264,23 +265,27 @@ export default function AdminRoute() {
 							</span>
 						</div>
 					</div>
-					<div className="rounded-xl border border-kumo-line bg-kumo-base p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-						<span className="text-xs text-kumo-subtle">已签发 MCP 密钥</span>
-						<div className="mt-1.5 flex items-baseline gap-2">
-							<span className="text-2xl font-semibold tabular-nums text-kumo-default">
+					<div className="relative overflow-hidden rounded-2xl craft-card p-5">
+						<span className="text-[11px] font-medium tracking-wider text-kumo-subtle uppercase">
+							已签发 MCP 密钥
+						</span>
+						<div className="mt-2 flex items-baseline gap-2">
+							<span className="text-3xl font-semibold tabular-nums tracking-tight text-kumo-default">
 								{totalKeys}
 							</span>
 							<span className="text-xs text-kumo-subtle">个有效密钥</span>
 						</div>
 					</div>
-					<div className="rounded-xl border border-kumo-line bg-kumo-base p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-						<span className="text-xs text-kumo-subtle">公开注册状态</span>
-						<div className="mt-2 flex items-center gap-2">
+					<div className="relative overflow-hidden rounded-2xl craft-card p-5">
+						<span className="text-[11px] font-medium tracking-wider text-kumo-subtle uppercase">
+							公开注册状态
+						</span>
+						<div className="mt-2.5 flex items-center gap-2">
 							<span
 								className={`h-2.5 w-2.5 rounded-full ${
 									adminSettings?.allowRegistration
-										? "bg-emerald-500"
-										: "bg-slate-400"
+										? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"
+										: "bg-kumo-subtle/50"
 								}`}
 							/>
 							<span className="text-base font-semibold text-kumo-default">
@@ -291,10 +296,10 @@ export default function AdminRoute() {
 				</div>
 
 				{/* 开放注册设置 */}
-				<section className="rounded-xl border border-kumo-line bg-kumo-base p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+				<section className="rounded-2xl craft-card p-5 md:p-6">
 					<div className="flex flex-wrap items-center justify-between gap-4">
 						<div className="space-y-1 max-w-xl">
-							<h2 className="text-base font-semibold text-kumo-default">
+							<h2 className="text-[15px] font-semibold text-kumo-default">
 								开放自助注册
 							</h2>
 							<p className="text-xs text-kumo-subtle leading-relaxed">
@@ -359,13 +364,13 @@ export default function AdminRoute() {
 				)}
 
 				{/* 账户列表 */}
-				<section className="rounded-xl border border-kumo-line bg-kumo-base p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+				<section className="rounded-2xl craft-card p-5 md:p-6">
 					<div className="flex items-center justify-between gap-4 mb-4">
 						<div className="flex items-center gap-2">
 							<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kumo-recessed border border-kumo-line text-kumo-subtle">
 								<UsersIcon size={16} weight="duotone" />
 							</div>
-							<h2 className="text-base font-semibold text-kumo-default">
+							<h2 className="text-[15px] font-semibold text-kumo-default">
 								账户列表
 							</h2>
 							<Badge variant="secondary">{users.length} 人</Badge>
@@ -381,26 +386,23 @@ export default function AdminRoute() {
 							{users.map((u) => {
 								const isSelf =
 									u.email.toLowerCase() === currentUser.email.toLowerCase();
-								const initial = (u.displayName || u.email)
-									.trim()
-									.charAt(0)
-									.toUpperCase();
+								const tone = getAvatarTone(u.email);
 								return (
 									<div
 										key={u.email}
-										className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 bg-kumo-base hover:bg-kumo-recessed/40 transition-colors"
+										className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 bg-kumo-base/60 hover:bg-[var(--surface-hover)] transition-colors"
 									>
 										<div className="flex items-center gap-3 min-w-0">
 											<div
-												className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
+												className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1 ${
 													u.disabled
-														? "bg-kumo-recessed text-kumo-subtle"
+														? "bg-kumo-recessed text-kumo-subtle ring-kumo-line"
 														: u.role === "admin"
-															? "bg-blue-50 text-blue-600 ring-1 ring-blue-600/15"
-															: "bg-kumo-recessed border border-kumo-line text-kumo-default"
+															? "bg-gradient-to-br from-[#6e7bf2] to-[#4f46e5] text-white ring-transparent"
+															: `${tone.bg} ${tone.text} ${tone.ring}`
 												}`}
 											>
-												{initial}
+												{getInitials(u.displayName || u.email)}
 											</div>
 											<div className="min-w-0">
 												<div className="flex items-center gap-2 flex-wrap">
@@ -411,7 +413,9 @@ export default function AdminRoute() {
 														{u.email}
 													</span>
 													{u.role === "admin" && (
-														<Badge variant="primary">管理员</Badge>
+														<span className="text-[10.5px] font-medium px-1.5 py-0.5 rounded-md craft-accent-badge">
+															管理员
+														</span>
 													)}
 													{u.disabled && (
 														<Badge variant="outline">已禁用</Badge>
@@ -429,18 +433,18 @@ export default function AdminRoute() {
 
 										<div className="flex items-center gap-1 shrink-0">
 											<Tooltip content="重置密码" asChild>
-												<Button
-													variant="ghost"
-													shape="square"
-													size="sm"
-													icon={<LockKeyIcon size={16} />}
+												<button
+													type="button"
 													onClick={() => {
 														setResetTarget(u);
 														setResetPassword("");
 														setResetError(null);
 													}}
 													aria-label="重置密码"
-												/>
+													className="flex h-8 w-8 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-default hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+												>
+													<LockKeyIcon size={16} />
+												</button>
 											</Tooltip>
 											{!isSelf && (
 												<>
@@ -448,41 +452,34 @@ export default function AdminRoute() {
 														content={u.disabled ? "启用账户" : "禁用账户"}
 														asChild
 													>
-														<Button
-															variant="ghost"
-															shape="square"
-															size="sm"
-															icon={
-																u.disabled ? (
-																	<UserCheckIcon
-																		size={16}
-																		className="text-kumo-success"
-																	/>
-																) : (
-																	<ProhibitIcon
-																		size={16}
-																		className="text-kumo-warning"
-																	/>
-																)
-															}
+														<button
+															type="button"
 															onClick={() => handleToggleDisabled(u)}
 															aria-label={u.disabled ? "启用账户" : "禁用账户"}
-														/>
+															className="flex h-8 w-8 items-center justify-center rounded-lg text-kumo-subtle hover:bg-[var(--surface-hover)] transition-colors cursor-pointer bg-transparent border-0"
+														>
+															{u.disabled ? (
+																<UserCheckIcon
+																	size={16}
+																	className="text-emerald-400"
+																/>
+															) : (
+																<ProhibitIcon
+																	size={16}
+																	className="text-amber-400"
+																/>
+															)}
+														</button>
 													</Tooltip>
 													<Tooltip content="删除账户及邮箱数据" asChild>
-														<Button
-															variant="ghost"
-															shape="square"
-															size="sm"
-															icon={
-																<TrashIcon
-																	size={16}
-																	className="text-kumo-destructive"
-																/>
-															}
+														<button
+															type="button"
 															onClick={() => handleDeleteUser(u)}
 															aria-label="删除账户"
-														/>
+															className="flex h-8 w-8 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-danger hover:bg-rose-500/10 transition-colors cursor-pointer bg-transparent border-0"
+														>
+															<TrashIcon size={16} />
+														</button>
 													</Tooltip>
 												</>
 											)}

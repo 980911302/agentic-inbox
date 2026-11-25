@@ -2,8 +2,13 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Banner, Button, Dialog, Input, Text } from "@cloudflare/kumo";
-import { FloppyDiskIcon, PaperPlaneTiltIcon } from "@phosphor-icons/react";
+import { Banner, Button, Dialog } from "@cloudflare/kumo";
+import {
+	FloppyDiskIcon,
+	PaperPlaneTiltIcon,
+	PencilSimpleIcon,
+} from "@phosphor-icons/react";
+import { useRef } from "react";
 import { useParams } from "react-router";
 import { useComposeForm } from "~/hooks/useComposeForm";
 import { useUIStore } from "~/hooks/useUIStore";
@@ -14,6 +19,7 @@ export default function ComposeEmail() {
 		mailboxId: string;
 		folder: string;
 	}>();
+	const formRef = useRef<HTMLFormElement>(null);
 
 	const { isComposeModalOpen, closeComposeModal } = useUIStore();
 
@@ -38,82 +44,106 @@ export default function ComposeEmail() {
 		handleSend,
 	} = useComposeForm(mailboxId, folder);
 
+	const handleFormKeyDown = (e: React.KeyboardEvent) => {
+		if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !isSending && !isSavingDraft) {
+			e.preventDefault();
+			formRef.current?.requestSubmit();
+		}
+	};
+
 	return (
 		<Dialog.Root
 			open={isComposeModalOpen}
 			onOpenChange={(open) => !open && !isSending && closeComposeModal()}
 		>
 			<Dialog size="lg" className="p-6 max-h-[85vh] overflow-y-auto">
-				<Dialog.Title className="text-lg font-semibold mb-5">
-					{formTitle}
+				<Dialog.Title className="flex items-center gap-2 text-base font-semibold mb-4">
+					<span className="flex h-7 w-7 items-center justify-center rounded-lg craft-accent-badge">
+						<PencilSimpleIcon size={14} weight="duotone" />
+					</span>
+					<span>{formTitle}</span>
 				</Dialog.Title>
+
 				<form
+					ref={formRef}
 					onSubmit={(e) => handleSend(e, closeComposeModal)}
+					onKeyDown={handleFormKeyDown}
 					className="space-y-4"
 				>
 					{error && <Banner variant="error" text={error} />}
-					<div className="flex items-center gap-2">
-						<div className="flex-1 min-w-0">
-							<Input
-								label="收件人"
-								className="w-full"
+
+					<div className="rounded-xl border border-kumo-line bg-kumo-recessed/40 divide-y divide-kumo-line overflow-hidden">
+						<div className="flex items-center gap-3 px-3.5 h-10">
+							<label className="text-xs font-medium text-kumo-subtle w-12 shrink-0">
+								收件人
+							</label>
+							<input
 								type="text"
 								placeholder="收件人邮箱，多个地址用逗号分隔"
-								size="sm"
 								value={to}
 								onChange={(e) => setTo(e.target.value)}
 								required
+								className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[13.5px] text-kumo-default placeholder:text-kumo-subtle/75 font-mono"
+							/>
+							{!showCcBcc && (
+								<button
+									type="button"
+									onClick={() => setShowCcBcc(true)}
+									className="shrink-0 text-xs text-[var(--craft-accent)] hover:underline font-medium cursor-pointer bg-transparent border-0"
+								>
+									抄送 / 密送
+								</button>
+							)}
+						</div>
+
+						{showCcBcc && (
+							<div className="flex items-center gap-3 px-3.5 h-10">
+								<label className="text-xs font-medium text-kumo-subtle w-12 shrink-0">
+									抄送
+								</label>
+								<input
+									type="text"
+									value={cc}
+									onChange={(e) => setCc(e.target.value)}
+									placeholder="多个地址请用英文逗号分隔"
+									className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[13.5px] text-kumo-default placeholder:text-kumo-subtle/75 font-mono"
+								/>
+							</div>
+						)}
+
+						{showCcBcc && (
+							<div className="flex items-center gap-3 px-3.5 h-10">
+								<label className="text-xs font-medium text-kumo-subtle w-12 shrink-0">
+									密送
+								</label>
+								<input
+									type="text"
+									value={bcc}
+									onChange={(e) => setBcc(e.target.value)}
+									placeholder="多个地址请用英文逗号分隔"
+									className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[13.5px] text-kumo-default placeholder:text-kumo-subtle/75 font-mono"
+								/>
+							</div>
+						)}
+
+						<div className="flex items-center gap-3 px-3.5 h-10">
+							<label className="text-xs font-medium text-kumo-subtle w-12 shrink-0">
+								主题
+							</label>
+							<input
+								type="text"
+								placeholder="请输入邮件主题"
+								value={subject}
+								onChange={(e) => setSubject(e.target.value)}
+								required
+								className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[13.5px] font-medium text-kumo-default placeholder:text-kumo-subtle/75"
 							/>
 						</div>
-						{!showCcBcc && (
-							<button
-								type="button"
-								onClick={() => setShowCcBcc(true)}
-								className="shrink-0 text-xs text-kumo-link hover:text-kumo-link-hover font-medium mt-5 cursor-pointer bg-transparent border-0"
-							>
-								抄送 / 密送
-							</button>
-						)}
 					</div>
-					{showCcBcc && (
-						<Input
-							label="抄送"
-							className="w-full"
-							type="text"
-							size="sm"
-							value={cc}
-							onChange={(e) => setCc(e.target.value)}
-							placeholder="多个地址请用英文逗号分隔"
-						/>
-					)}
-					{showCcBcc && (
-						<Input
-							label="密送"
-							className="w-full"
-							type="text"
-							size="sm"
-							value={bcc}
-							onChange={(e) => setBcc(e.target.value)}
-							placeholder="多个地址请用英文逗号分隔"
-						/>
-					)}
-					<Input
-						label="主题"
-						className="w-full"
-						type="text"
-						placeholder="请输入邮件主题"
-						size="sm"
-						value={subject}
-						onChange={(e) => setSubject(e.target.value)}
-						required
-					/>
-					<div>
-						<Text size="sm" DANGEROUS_className="font-medium mb-1.5 block">
-							正文
-						</Text>
-						<RichTextEditor value={body} onChange={setBody} />
-					</div>
-					<div className="flex justify-between items-center pt-2">
+
+					<RichTextEditor value={body} onChange={setBody} />
+
+					<div className="flex justify-between items-center pt-1">
 						<Button
 							type="button"
 							variant="ghost"
@@ -135,16 +165,17 @@ export default function ComposeEmail() {
 							>
 								{isSavingDraft ? "保存中..." : "存为草稿"}
 							</Button>
-							<Button
+							<button
 								type="submit"
-								variant="primary"
-								size="sm"
-								loading={isSending}
 								disabled={isSavingDraft || isSending}
-								icon={<PaperPlaneTiltIcon size={14} />}
+								className="inline-flex items-center gap-2 h-8 px-3.5 rounded-lg text-[13px] font-medium text-white bg-[var(--craft-accent)] hover:bg-[var(--craft-accent-hover)] disabled:opacity-50 active:scale-[0.985] transition-all cursor-pointer border-0 shadow-[0_4px_14px_-4px_var(--craft-accent-ring)]"
 							>
-								{isSending ? "发送中..." : "发送"}
-							</Button>
+								<PaperPlaneTiltIcon size={14} weight="bold" />
+								<span>{isSending ? "发送中..." : "发送"}</span>
+								<kbd className="hidden sm:inline-flex items-center justify-center h-4.5 px-1 rounded bg-white/18 text-[10px] font-mono text-white/90 border border-white/20">
+									⌘↵
+								</kbd>
+							</button>
 						</div>
 					</div>
 				</form>

@@ -18,8 +18,10 @@ import {
 	CopyIcon,
 	KeyIcon,
 	LockSimpleIcon,
+	MoonIcon,
 	PlugsIcon,
 	PlusIcon,
+	SunIcon,
 	TrashIcon,
 	UserCircleIcon,
 	WarningCircleIcon,
@@ -27,6 +29,7 @@ import {
 import { type FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { formatQuotedDate } from "shared/dates";
+import { useUIStore } from "~/hooks/useUIStore";
 import {
 	useApiKeys,
 	useChangePassword,
@@ -72,6 +75,7 @@ function CopyButton({ text, label = "复制" }: { text: string; label?: string }
 export default function SettingsRoute() {
 	const { mailboxId } = useParams<{ mailboxId: string }>();
 	const toastManager = useKumoToastManager();
+	const { theme, setTheme } = useUIStore();
 	const { data: mailbox } = useMailbox(mailboxId);
 	const updateMailboxMutation = useUpdateMailbox();
 
@@ -224,27 +228,94 @@ export default function SettingsRoute() {
 		: "";
 
 	return (
-		<div className="h-full overflow-y-auto bg-kumo-recessed/35">
-			<div className="max-w-3xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-6 pb-14">
+		<div className="h-full overflow-y-auto bg-kumo-recessed/25">
+			<div className="max-w-3xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-6 pb-16">
 				{/* 页面标题 */}
 				<div>
 					<h1 className="text-xl font-semibold tracking-tight text-kumo-default">
 						MCP 密钥与账户设置
 					</h1>
-					<p className="text-sm text-kumo-subtle mt-1">
-						管理专属邮箱的 MCP 访问密钥、发件人资料与登录安全
+					<p className="text-[13.5px] text-kumo-subtle mt-1">
+						管理专属邮箱的 MCP 访问密钥、外观主题、发件人资料与登录安全
 					</p>
 				</div>
 
+				{/* 外观主题选择（黑曜石深色 / 暖白浅色） */}
+				<section className="rounded-2xl craft-card p-5 md:p-6 space-y-4">
+					<div>
+						<h2 className="text-[15px] font-semibold text-kumo-default">
+							界面外观
+						</h2>
+						<p className="text-xs text-kumo-subtle mt-0.5">
+							选择你偏好的工作台质感，设置会自动保存在本地浏览器
+						</p>
+					</div>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<button
+							type="button"
+							onClick={() => setTheme("dark")}
+							className={`group flex items-center gap-3.5 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+								theme === "dark"
+									? "border-[var(--craft-accent)] bg-[var(--craft-accent-soft)] ring-1 ring-[var(--craft-accent-ring)]"
+									: "border-kumo-line bg-kumo-recessed/40 hover:bg-[var(--surface-hover)]"
+							}`}
+						>
+							<div className="h-10 w-12 rounded-lg bg-[#0b0d13] border border-white/15 p-1.5 flex flex-col justify-between shrink-0">
+								<div className="h-1.5 w-6 rounded-full bg-[#7382ff]" />
+								<div className="space-y-1">
+									<div className="h-1 w-8 rounded-full bg-white/25" />
+									<div className="h-1 w-5 rounded-full bg-white/15" />
+								</div>
+							</div>
+							<div className="min-w-0 flex-1">
+								<div className="flex items-center gap-1.5 text-sm font-medium text-kumo-default">
+									<MoonIcon size={14} weight="duotone" className="text-[var(--craft-accent)]" />
+									<span>黑曜石深色</span>
+								</div>
+								<p className="text-[11.5px] text-kumo-subtle mt-0.5">
+									低眩光深邃画布，专注高频阅读与开发
+								</p>
+							</div>
+						</button>
+
+						<button
+							type="button"
+							onClick={() => setTheme("light")}
+							className={`group flex items-center gap-3.5 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+								theme === "light"
+									? "border-[var(--craft-accent)] bg-[var(--craft-accent-soft)] ring-1 ring-[var(--craft-accent-ring)]"
+									: "border-kumo-line bg-kumo-recessed/40 hover:bg-[var(--surface-hover)]"
+							}`}
+						>
+							<div className="h-10 w-12 rounded-lg bg-[#f3f2ee] border border-black/10 p-1.5 flex flex-col justify-between shrink-0">
+								<div className="h-1.5 w-6 rounded-full bg-[#4f5ce6]" />
+								<div className="space-y-1">
+									<div className="h-1 w-8 rounded-full bg-black/25" />
+									<div className="h-1 w-5 rounded-full bg-black/15" />
+								</div>
+							</div>
+							<div className="min-w-0 flex-1">
+								<div className="flex items-center gap-1.5 text-sm font-medium text-kumo-default">
+									<SunIcon size={14} weight="duotone" className="text-amber-500" />
+									<span>暖白浅色</span>
+								</div>
+								<p className="text-[11.5px] text-kumo-subtle mt-0.5">
+									柔和暖石纸面，明亮通透的日间阅读体验
+								</p>
+							</div>
+						</button>
+					</div>
+				</section>
+
 				{/* MCP 密钥管理（核心卡片） */}
-				<section className="rounded-xl border border-kumo-line bg-kumo-base p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)] space-y-5">
+				<section className="rounded-2xl craft-card p-5 md:p-6 space-y-5">
 					<div className="flex items-start justify-between gap-4">
 						<div className="space-y-1 flex-1 min-w-0">
 							<div className="flex items-center gap-2">
-								<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-									<KeyIcon size={16} weight="duotone" />
+								<div className="flex h-7 w-7 items-center justify-center rounded-lg craft-accent-badge">
+									<KeyIcon size={15} weight="duotone" />
 								</div>
-								<h2 className="text-base font-semibold text-kumo-default">
+								<h2 className="text-[15px] font-semibold text-kumo-default">
 									MCP 访问密钥
 								</h2>
 								<Badge variant="secondary">{apiKeys.length} 个</Badge>
@@ -273,9 +344,9 @@ export default function SettingsRoute() {
 					</div>
 
 					{/* MCP 端点地址条 */}
-					<div className="rounded-xl bg-kumo-recessed/70 border border-kumo-line px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+					<div className="rounded-xl bg-kumo-recessed/65 border border-kumo-line px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-3">
 						<div className="flex items-center gap-2.5 min-w-0 flex-1">
-							<PlugsIcon size={16} className="text-blue-600 shrink-0" />
+							<PlugsIcon size={16} className="text-[var(--craft-accent)] shrink-0" />
 							<div className="min-w-0">
 								<span className="text-[11px] text-kumo-subtle block">
 									MCP 服务地址（Streamable HTTP）
@@ -294,7 +365,7 @@ export default function SettingsRoute() {
 							<Loader size="base" />
 						</div>
 					) : apiKeys.length === 0 ? (
-						<div className="rounded-xl border border-dashed border-kumo-line bg-kumo-recessed/30 py-9 px-4 text-center space-y-2">
+						<div className="rounded-xl border border-dashed border-kumo-line bg-kumo-recessed/30 py-9 px-4 text-center space-y-1.5">
 							<p className="text-sm font-medium text-kumo-default">
 								尚未创建 MCP 密钥
 							</p>
@@ -307,7 +378,7 @@ export default function SettingsRoute() {
 							{apiKeys.map((item) => (
 								<div
 									key={item.id}
-									className="flex items-center justify-between gap-3 px-4 py-3.5 bg-kumo-base hover:bg-kumo-recessed/40 transition-colors"
+									className="flex items-center justify-between gap-3 px-4 py-3.5 bg-kumo-base/60 hover:bg-[var(--surface-hover)] transition-colors"
 								>
 									<div className="flex items-start gap-3 min-w-0">
 										<div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-kumo-recessed border border-kumo-line text-kumo-subtle">
@@ -332,19 +403,14 @@ export default function SettingsRoute() {
 										</div>
 									</div>
 									<Tooltip content="删除并吊销此密钥" asChild>
-										<Button
-											variant="ghost"
-											shape="square"
-											size="sm"
-											icon={
-												<TrashIcon
-													size={16}
-													className="text-kumo-destructive"
-												/>
-											}
+										<button
+											type="button"
 											onClick={() => handleDeleteKey(item.id, item.name)}
 											aria-label="删除密钥"
-										/>
+											className="flex h-8 w-8 items-center justify-center rounded-lg text-kumo-subtle hover:text-kumo-danger hover:bg-rose-500/10 transition-colors cursor-pointer bg-transparent border-0"
+										>
+											<TrashIcon size={16} />
+										</button>
 									</Tooltip>
 								</div>
 							))}
@@ -355,13 +421,13 @@ export default function SettingsRoute() {
 				{/* 账户信息与邮件签名 */}
 				<form
 					onSubmit={handleSaveProfile}
-					className="rounded-xl border border-kumo-line bg-kumo-base p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)] space-y-5"
+					className="rounded-2xl craft-card p-5 md:p-6 space-y-5"
 				>
 					<div className="flex items-center gap-2">
 						<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kumo-recessed border border-kumo-line text-kumo-subtle">
 							<UserCircleIcon size={16} weight="duotone" />
 						</div>
-						<h2 className="text-base font-semibold text-kumo-default">
+						<h2 className="text-[15px] font-semibold text-kumo-default">
 							账户资料与邮件签名
 						</h2>
 					</div>
@@ -425,13 +491,13 @@ export default function SettingsRoute() {
 				{/* 修改密码 */}
 				<form
 					onSubmit={handleChangePassword}
-					className="rounded-xl border border-kumo-line bg-kumo-base p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)] space-y-4"
+					className="rounded-2xl craft-card p-5 md:p-6 space-y-4"
 				>
 					<div className="flex items-center gap-2">
 						<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kumo-recessed border border-kumo-line text-kumo-subtle">
 							<LockSimpleIcon size={16} weight="duotone" />
 						</div>
-						<h2 className="text-base font-semibold text-kumo-default">
+						<h2 className="text-[15px] font-semibold text-kumo-default">
 							修改登录密码
 						</h2>
 					</div>
